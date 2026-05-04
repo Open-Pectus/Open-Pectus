@@ -134,7 +134,7 @@ class PInterpreter(NodeVisitor):
 # region Tick
 
     def tick(self, tick_time: float, tick_number: int):
-
+        logger.debug(f"Tick: {tick_number}")
         # this runs the tick with subticks in proper order
         for _ in self.tick_iterate_subticks(tick_time, tick_number):
             pass
@@ -506,6 +506,7 @@ class PInterpreter(NodeVisitor):
 
         if node.completed:
             logger.warning(f"Block {node.key} already completed")
+            node.lock_acquired = False
             return
 
         if not node.block_ended:
@@ -552,14 +553,9 @@ class PInterpreter(NodeVisitor):
         node.child_index = len(node.children)
         node.completed = True
         self.tracking.mark_completed(node)
-        self.context.emitter.emit_on_scope_end(node.id, "Block", node.arguments)
 
 
     def visit_EndBlockNode(self, node: p.EndBlockNode) -> NodeGenerator:
-        # Find the block to end. If node has a Block ancestor, that is the one to end. If not,
-        # there may be locked blocks in interrupts/main other that the current interrupt/main.
-        # Lookup locked blocks and find the innermost Block node which is the first to end.
-
         old_block: p.BlockNode | None = None
         new_block: p.BlockNode | None = None
 
@@ -572,36 +568,26 @@ class PInterpreter(NodeVisitor):
             old_block = locked_blocks[0]
         else:
             # There are multiple locked blocks. This can only occur if they are contained in each other so the
-            # innermost block is the first to be unlocked. When sorted by key_path, the innermost block is the last
-            locked_blocks.sort(key=lambda node: node.key_path)
-            old_block = locked_blocks[-1]
-            new_block = locked_blocks[-2]
-
-            if __debug__:
-                # Lets verify that
-                last_block_ancestors = old_block.parents
-                for i in range(0, len(locked_blocks) - 1):
-                    assert locked_blocks[i] in last_block_ancestors
+            # innermost block is the first to be unlocked. This is the first one
+            old_block = locked_blocks[0]
+            new_block = locked_blocks[1]
 
         self.tracking.mark_started(node)
 
         if old_block is None:
             logger.warning("EndBlock found no block to end")
-            self.tracking.mark_cancelled(node, update_node=False) # TODO: was done previously - should we still do this?
+            #self.tracking.mark_cancelled(node, update_node=False) # TODO: was done previously - should we still do this?
         else:
-            new_block_name = new_block.name if new_block is not None else None
-            self.context.tags[SystemTagName.BLOCK].set_value(new_block_name, self._tick_number)
-            self.context.emitter.emit_on_block_end(old_block.name, new_block_name or "", self._tick_number)
+            new_block_name_or__none = new_block.name if new_block is not None else None
+            self.context.tags[SystemTagName.BLOCK].set_value(new_block_name_or__none, self._tick_number)
+            self.context.emitter.emit_on_block_end(old_block.name, new_block_name_or__none or "", self._tick_number)
 
             old_block.block_ended = True
             self._abort_block_interrupts(old_block)
+            self.context.emitter.emit_on_scope_end(node.id, "Block", node.arguments)
+
             logger.debug(f"EndBlockNode {node.key} has ended block {old_block.key}")
             logger.debug(f"New active block is: {new_block.key if new_block is not None else "No active block"}")
-            # NOTE: block change may not be complete until the old block visit completes ... 
-            # maybe move something around - before visit_EndBlock did all the clean up
-            # old_block.children_complete = True
-            # old_block.completed = True
-            # self.tracking.mark_completed(old_block)
 
         self.tracking.mark_completed(node)
         node.completed = True
@@ -609,28 +595,31 @@ class PInterpreter(NodeVisitor):
 
 
     def visit_EndBlocksNode(self, node: p.EndBlocksNode) -> NodeGenerator:
-        raise NotImplementedError("TODO implement visit_EndBlocksNode")
-    
-        def end_blocks(node: p.EndBlocksNode):
-            self.tracking.mark_started(node)
-            if not isinstance(self.stack.peek(), p.BlockNode):
-                logger.debug(f"No blocks to end for node {node}")
-                self.tracking.mark_cancelled(node)
-                return
-            while isinstance(self.stack.peek(), p.BlockNode):
-                old_block = self.stack.pop()
-                new_block = self.stack.peek()
-                logger.debug(f"Ending block {old_block}")
-                new_block_name = new_block.name if isinstance(new_block, p.BlockNode) else None
-                self.context.tags[SystemTagName.BLOCK].set_value(new_block_name, self._tick_number)
-                self.context.emitter.emit_on_block_end(old_block.name, new_block_name or "", self._tick_number)
-                old_block.children_complete = True
-                old_block.completed = True
-                self.tracking.mark_completed(old_block)
+        locked_blocks = self._program.get_locked_blocks()
+        locked_block_keys = [b.key for b in locked_blocks]
+        self.tracking.mark_started(node)
+        logger.debug("Locked blocks: " + ', '.join(locked_block_keys))
+
+        if len(locked_blocks) == 0:
+            logger.warning("EndBlocks found no block(s) to end")
+            #self.tracking.mark_cancelled(node, update_node=False) # TODO: was done previously - should we still do this?            
+        else:
+            # end blocks from inner to outer            
+            for i in range(0, len(locked_blocks)):
+                old_block = locked_blocks[i]
+                new_block = locked_blocks[i + 1] if i + 1 < len(locked_blocks) - 1 else None
+                new_block_name = new_block.name if new_block is not None else ""
+                self.context.emitter.emit_on_block_end(old_block.name, new_block_name, self._tick_number)
+
+                old_block.block_ended = True
                 self._abort_block_interrupts(old_block)
-            node.completed = True
-            self.tracking.mark_completed(node)
-        yield NodeAction(node, end_blocks)
+                logger.debug(f"EndBlockNode {node.key} has ended block {old_block.key}")
+                logger.debug(f"New active block is: {new_block.key if new_block is not None else "No active block"}")
+
+        self.context.tags[SystemTagName.BLOCK].set_value(None, self._tick_number)
+        self.tracking.mark_completed(node)
+        node.completed = True
+        yield VisitResult.EndTick
 
 
     def visit_InterpreterCommandNode(self, node: p.InterpreterCommandNode) -> NodeGenerator:  # noqa C901

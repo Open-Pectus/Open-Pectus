@@ -10,7 +10,7 @@ from openpectus.engine.models import EngineCommandEnum
 from openpectus.lang.exec.clock import WallClock
 from openpectus.lang.exec.errors import EngineError
 from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
-from openpectus.lang.exec.events import BlockInfo, EventListener
+from openpectus.lang.exec.events import BlockInfo, EventListener, ScopeInfo
 from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 from openpectus.lang.exec.pinterpreter import PInterpreter
@@ -125,6 +125,8 @@ class EngineTestInstance(EventListener):
         # register as listener for lifetime events, so these events can be awaited in the tests
         self.engine.emitter.add_listener(self)
         self._last_event: EventName | None = None
+        self._scopes: list[ScopeInfo] = []
+        self._scope_history: list[ScopeInfo] = []
 
     def start(self):
         """ Schedules the Start command. run_* is required to actually run it """
@@ -142,6 +144,16 @@ class EngineTestInstance(EventListener):
     @property
     def runtimeinfo(self) -> RuntimeInfo:
         return self.engine.interpreter.runtimeinfo
+
+    @property
+    def scope_node(self) -> str | None:
+        if len(self._scopes) > 0:
+            return self._scopes[-1].node_id
+        return None
+
+    @property
+    def scope_node_history(self) -> list[str]:
+        return list([scope.node_id for scope in self._scope_history])
 
     def run_until_condition(self, condition: RunCondition, max_ticks=30, fail_on_log_error=True) -> int:
         """ Continue program until condition occurs. Return the number of ticks spent.
@@ -375,6 +387,25 @@ class EngineTestInstance(EventListener):
 
     def on_block_end(self, block_info: BlockInfo, new_block_info: BlockInfo | None):
         self._last_event = "block_end"
+
+    def on_scope_start(self, scope_info: ScopeInfo):
+        self._scopes.append(scope_info)
+        self._scope_history.append(scope_info)
+
+    # def on_scope_activate(self, scope_info: ScopeInfo):
+    #     pass
+
+    def on_scope_end(self, scope_info: ScopeInfo):
+        if len(self._scopes) == 0:
+            logger.error("Scope error. Event scope_end was raised when no scope were active")
+            return
+        scope = self._scopes[-1]
+        if scope.node_id != scope_info.node_id or scope.scope_type != scope_info.scope_type or scope.argument != scope_info.argument:
+            logger.error("Scope error. Evenc scope_end was raised when a different scope was active")
+            logger.error(f"Current scope: {scope}")
+            logger.error(f"Scope to end: {scope_info}")
+        else:
+            self._scopes.pop()
 
     def on_tick(self, tick_time: float, increment_time: float):
         pass
