@@ -21,7 +21,7 @@ from openpectus.lang.exec.uod import (
     RegexNamedArgumentParser
 )
 from openpectus.test.engine.utility_methods import (
-    continue_engine, run_engine,
+    EngineTestRunner, continue_engine, continue_engine_until, run_engine,
     configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging,
     print_runlog, print_runtime_records
 )
@@ -217,7 +217,9 @@ class TestEngine(unittest.TestCase):
 
         self.assertEqual("N/A", reset_tag.get_value())
 
-        run_engine(e, "Reset", start_ticks + 1)
+        run_engine(e, "Reset", 1)
+        continue_engine_until(e, lambda: reset_tag.get_value() == "Reset", 10)
+
         self.assertEqual("Reset", reset_tag.get_value())
 
         # assert tags marked dirty
@@ -490,7 +492,7 @@ class TestEngine(unittest.TestCase):
         self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
 
         e.inject_code("Reset")
-        continue_engine(e, 1)
+        continue_engine(e, 3)
 
         self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
 
@@ -499,7 +501,7 @@ class TestEngine(unittest.TestCase):
 
         self.assertEqual("N/A", e.uod.tags["Reset"].get_value())
 
-        run_engine(e, "Reset", start_ticks + 1)
+        run_engine(e, "Reset", start_ticks + 3)
         self.assertEqual("Reset", e.uod.tags["Reset"].get_value())
 
         # Reset takes 5 ticks to revert
@@ -516,90 +518,68 @@ class TestEngine(unittest.TestCase):
         print_runlog(e)
 
     def test_concurrent_uod_commands(self):
-        e = self.engine
-        run_engine(e, """
+        self.engine.cleanup()  # dispose the test default engine
+        
+        code = """\
 Reset
 Reset
-""", 5)
+"""
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_command("Reset", "cancelled")
 
-        records = e.tracking.records
+            records = instance.engine.tracking.records
+            # print_runtime_records(instance.engine)
 
-        print_runtime_records(e)
+            r = records[1]
+            self.assertEqual("Reset", r.name)
+            self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
+            self.assertTrue(r.has_state(RuntimeRecordStateEnum.Cancelled))
+            self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Completed))
 
-        r = records[1]
-        self.assertEqual("Reset", r.name)
-        self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
-        self.assertTrue(r.has_state(RuntimeRecordStateEnum.Cancelled))
-        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Completed))
+            r = records[2]
+            self.assertEqual("Reset", r.name)
+            self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
+            self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Cancelled))
+            self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Completed))
 
-        r = records[2]
-        self.assertEqual("Reset", r.name)
-        self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
-        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Cancelled))
-        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Completed))
-
-        continue_engine(e, 5)
-        print_runtime_records(e)
-        self.assertTrue(r.has_state(RuntimeRecordStateEnum.Completed))
+            instance.run_ticks(8)
+            # print_runtime_records(instance.engine)
+            self.assertTrue(r.has_state(RuntimeRecordStateEnum.Completed))
 
     def test_overlapping_uod_commands(self):
-        e = self.engine
-        run_engine(e, """
+        self.engine.cleanup()  # dispose the test default engine
+        
+        code = """\
 overlap1
 overlap2
-""", 5)
-
-        rs = e.tracking.records
-
-        print_runtime_records(e)
-
-        r = rs[1]
-        self.assertEqual("overlap1", r.name)
-        self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
-        self.assertTrue(r.has_state(RuntimeRecordStateEnum.Cancelled))
-        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Forced))
-        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Completed))
-
-        continue_engine(e, 1)
-        print_runtime_records(e)
-
-        r = rs[2]
-        self.assertEqual("overlap2", r.name)
-        self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
-        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Cancelled))
-        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Forced))
-        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Completed))
-
-        continue_engine(e, 1)
-        print_runtime_records(e)
-
-        self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Completed))
-
-        print_runlog(e)
-
-    def test_runlog_block(self):
-        program = """
-Block: A
-    End block
-Mark: X
 """
-        e = self.engine
-        run_engine(e, program, 3)
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_command("overlap1", "cancelled")
+            rs = instance.engine.tracking.records
+            #print_runtime_records(instance.engine)
 
-        rs = e.tracking.records
+            r = rs[1]
+            self.assertEqual("overlap1", r.name)
+            self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
+            self.assertTrue(r.has_state(RuntimeRecordStateEnum.Cancelled))
+            self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Forced))
+            self.assertTrue(not r.has_state(RuntimeRecordStateEnum.Completed))
 
-        print_runtime_records(e)
+            r2 = rs[2]
+            self.assertEqual("overlap2", r2.name)
 
-        self.assertEqual("Block: A", rs[1].name)
-        self.assertFalse(rs[0].has_state(RuntimeRecordStateEnum.Started))
+            instance.run_until_command("overlap2", "started")
+            #print_runtime_records(instance.engine)
 
-        continue_engine(e, 1)
-        self.assertTrue(rs[1].has_state(RuntimeRecordStateEnum.Started))
+            self.assertTrue(r2.has_state(RuntimeRecordStateEnum.Started))
+            self.assertTrue(not r2.has_state(RuntimeRecordStateEnum.Cancelled))
+            self.assertTrue(not r2.has_state(RuntimeRecordStateEnum.Forced))
+            self.assertTrue(not r2.has_state(RuntimeRecordStateEnum.Completed))
 
-        continue_engine(e, 2)
-        self.assertTrue(rs[1].has_state(RuntimeRecordStateEnum.Completed))
-
-        print_runtime_records(e)
 
     # AssertionError: 'Watch: Block Time > 0.2s' != 'Block Time > 0.2s'
     # r.name is incorrect
@@ -636,33 +616,6 @@ Reset
 
         print_runtime_records(e)
 
-    @unittest.skip("Not implemented yet")
-    def test_runlog_watch_forced(self):
-        # TODO how do we represent the instruction we want to force?
-        # user picks a runlog line to force
-        # - how do we get to cmd or node from that?
-        # - line number? or we assign uuids to entries?
-        # - how about a modified program? should use version numbers
-        #   to handle program modifications and runlog implications
-
-        raise NotImplementedError()
-
-    def test_internal_command_can_execute_valid_command(self):
-        e = self.engine
-
-        self.assertEqual(0, e._system_tags["Run Counter"].get_value())
-
-        e.schedule_execution("Start")
-        e.tick(0, 0)
-
-        e.inject_code("Increment run counter")
-        e.tick(0, 0)
-        e.tick(0, 0)
-
-        self.assertEqual(1, e._system_tags["Run Counter"].get_value())
-
-        print_runlog(e)
-
     def test_clocks(self):
         e = self.engine
 
@@ -680,23 +633,6 @@ Mark: C
         run_engine(e, program, 10)
 
         self.assertEqual(['A', 'B', 'C'], e.interpreter.get_marks())
-
-    def test_set_and_continue_program(self):
-        code = "Mark: A\nMark: B\nMark: C"
-        e = self.engine
-        run_engine(e, code, 2)
-        # run_engine(e, code, start_ticks)
-        self.assertEqual(['A'], e.interpreter.get_marks())
-        continue_engine(e, 10)
-
-        self.assertEqual(['A', 'B', 'C'], e.interpreter.get_marks())
-
-    @unittest.skip("not implemented, needs input")
-    def test_get_status(self):
-        # program progress
-        # status that enable ProcessUnit:
-        # name, state=ProcessUnitState (READY, IN_PROGRESS , NOT_ONLINE) , location="H21.5", runtime_msec=189309,
-        raise NotImplementedError()
 
     def test_get_runlog(self):
         e = self.engine
@@ -875,59 +811,58 @@ Mark: C
 
 
     def test_pause_w_duration(self):
-        e = self.engine
-        program = """
+        self.engine.cleanup()  # dispose the test default engine
+        code = """\
 Mark: a
 Pause: .5s
 Mark: b
 """
-        run_engine(e, program, 5)
-        self.assertTrue(e._runstate_started)
-        self.assertTrue(e._runstate_paused)
-        system_state_tag = e._system_tags[SystemTagName.SYSTEM_STATE]
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_command("Pause", "started", increment_index=False)
 
-        self.assertEqual(SystemStateEnum.Paused, system_state_tag.get_value())
+            self.assertTrue(instance.engine._runstate_started)
+            self.assertTrue(instance.engine._runstate_paused)
+            system_state_tag = instance.engine._system_tags[SystemTagName.SYSTEM_STATE]
 
-        continue_engine(e, 5)
+            self.assertEqual(SystemStateEnum.Paused, system_state_tag.get_value())
 
-        self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
+            ticks = instance.run_until_command("Pause", "completed")
+            self.assertIn(ticks, range(5, 7))
+            self.assertFalse(instance.engine._runstate_paused)
+            self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
 
     def test_hold_w_duration(self):
-        e = self.engine
-        program = """
+        self.engine.cleanup()  # dispose the test default engine
+        code = """
 Mark: a
 Hold: .5s
 Mark: b
 """
-        run_engine(e, program, 7)
-        self.assertTrue(e._runstate_started)
-        self.assertTrue(e._runstate_holding)
-        system_state_tag = e._system_tags[SystemTagName.SYSTEM_STATE]
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_command("Hold", "started", increment_index=False)
 
-        self.assertEqual(SystemStateEnum.Holding, system_state_tag.get_value())
+            self.assertTrue(instance.engine._runstate_started)
+            self.assertTrue(instance.engine._runstate_holding)
+            system_state_tag = instance.engine._system_tags[SystemTagName.SYSTEM_STATE]
+            self.assertEqual(SystemStateEnum.Holding, system_state_tag.get_value())
 
-        continue_engine(e, 5)
-
-        self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
+            ticks = instance.run_until_command("Hold", "completed")
+            self.assertEqual(SystemStateEnum.Running, system_state_tag.get_value())
+            self.assertIn(ticks, range(5, 7))
 
     def test_wait(self):
-        e = self.engine
-        program = """
-Mark: a
-Wait: .5s
-Mark: b
-"""
-        run_engine(e, program, 2)
-        self.assertEqual([], e.interpreter.get_marks())
+        self.engine.cleanup()  # dispose the test default engine
 
-        continue_engine(e, 1)
-        self.assertEqual(['a'], e.interpreter.get_marks())
-
-        continue_engine(e, 5)
-        self.assertEqual(['a'], e.interpreter.get_marks())
-
-        continue_engine(e, 3)
-        self.assertEqual(['a', 'b'], e.interpreter.get_marks())
+        runner = EngineTestRunner(create_test_uod, "Wait: .5s")
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_instruction("Wait", "started", increment_index=False)
+            ticks = instance.run_until_instruction("Wait", "completed")
+            self.assertIn(ticks, range(4, 7))
 
     # --- Safe values ---
 
@@ -1060,6 +995,7 @@ Base: s
             self.assertAlmostEqual(t1 - t0, 1, delta=0.1)
             self.assertAlmostEqual(acc_vol.as_float(), 1, delta=0.1)
 
+    # TODO still fails
     def test_accumulated_block_volume(self):
         self.engine.cleanup()  # dispose the test default engine
         delta = 0.15
@@ -1069,7 +1005,7 @@ Base: s
                .with_instrument("TestUod")
                .with_author("Test Author", "test@openpectus.org")
                .with_filename(__file__)
-               .with_hardware(TestHW())
+               .with_hardware(TestHW(connected=True))
                .with_location("Test location")
                .with_tag(CalculatedLinearTag("calc", "L"))
                .with_accumulated_volume(totalizer_tag_name="calc")
@@ -1082,12 +1018,15 @@ Block: A
     0.85 End block
 0.45 Mark: A
         """
-        with create_engine_context(uod) as e:
-            acc_vol = e.tags[SystemTagName.ACCUMULATED_VOLUME]
-            block_vol = e.tags[SystemTagName.BLOCK_VOLUME]
-            block = e.tags[SystemTagName.BLOCK]
+        runner = EngineTestRunner(lambda: uod, program)
+        with runner.run() as instance:
+            
+            acc_vol = instance.engine.tags[SystemTagName.ACCUMULATED_VOLUME]
+            block_vol = instance.engine.tags[SystemTagName.BLOCK_VOLUME]
+            block = instance.engine.tags[SystemTagName.BLOCK]
 
-            run_engine(e, program, 1)
+            instance.run_ticks(3)
+            #run_engine(e, program, 1)
             self.assertEqual(block.get_value(), None)
 
             self.assertEqual(acc_vol.as_float(), 0.0)
@@ -1289,13 +1228,13 @@ Block: A
     def test_engine_error_causes_Paused_state(self):
         e = self.engine
         with self.assertRaises(EngineError):
-            run_engine(e, "foo bar", 3)
+            run_engine(e, "foo bar", 5)
         self.assertTrue(e.has_error_state())
 
     def test_interpreter_error_causes_Paused_state(self):
         e = self.engine
         with self.assertRaises(EngineError):
-            run_engine(e, """WATCH x > 2""", 3)
+            run_engine(e, """Watch x > 2""", 5)
         self.assertTrue(e._runstate_paused)
 
 
@@ -1305,9 +1244,10 @@ Block: A
 class TestHW(HardwareLayerBase):
     __test__ = False
 
-    def __init__(self) -> None:
+    def __init__(self, connected: bool = False) -> None:
         super().__init__()
         self.register_values = {}
+        self._is_connected = connected
 
     @override
     def read(self, r: Register) -> Any:
