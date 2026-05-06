@@ -174,7 +174,10 @@ class Labjack_Hardware(HardwareLayerBase):
             raise HardwareLayerException(f"Unable to write '{value}' to {r}. Labjack error: {error}.")
 
     def write_batch(self, values: Sequence[Any], registers: Sequence[Register]):
-        """ Write batch of register values with a single OPC-UA call. """
+        """ Write batch of register values with a single LabJack call. """
+        # ljm.eWriteNames cannot handle a 0-length input.
+        if len(values) == 0 and len(registers) == 0:
+            return
         for r in registers:
             if RegisterDirection.Write not in r.direction:
                 raise HardwareLayerException(f"Attempt to write unwritable register {r}.")
