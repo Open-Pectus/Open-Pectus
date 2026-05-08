@@ -173,7 +173,7 @@ class Method(ProtocolModel):
             match = re.search(REGEX_NUMBERED_PCODE, first_line)
             return match is not None
         except Exception:
-            return False        
+            return False
 
     @staticmethod
     def from_numbered_pcode(pcode: str) -> Method:

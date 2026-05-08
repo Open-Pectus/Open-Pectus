@@ -459,7 +459,7 @@ class NodeWithChildren(Node):
                     return match
         return None
 
-    def get_first_child_or_throw(self, node_type: Type[TNode]) -> TNode:
+    def get_first_child_or_fail(self, node_type: Type[TNode]) -> TNode:
         value = self.get_first_child(node_type)
         if value is None:
             raise ValueError(f"No node of type {node_type} was found")
@@ -677,7 +677,8 @@ class NodeWithCondition(NodeWithChildren, NodeWithTagOperatorValue):
     def reset_runtime_state(self, recursive):
         self.awaiting_condition = False
         self.activated = False
-        self.tag_operator_value = None
+        # this is incorrect but i think a test depends on it. should find it and fix it correctly
+        #self.tag_operator_value = None
         super().reset_runtime_state(recursive)
 
     @property

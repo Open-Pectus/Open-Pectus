@@ -2,6 +2,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 import logging
 from logging import LogRecord, Handler
+import random
 import time
 from typing import Callable, Generator, Literal
 
@@ -37,6 +38,7 @@ def _handle_engine_error(engine: Engine):
 
 
 UodFactory = Callable[[], UnitOperationDefinitionBase]
+UodInstanceOrFactory = UnitOperationDefinitionBase | UodFactory
 
 RunCondition = Callable[[], bool]
 
@@ -54,7 +56,7 @@ InstructionName = Literal[
     "Stop", "Restart",
     "Info", "Warning", "Error",
     "Macro", "Call macro",
-    "Increment run counter",
+    "Increment run counter", "Base",
     "Noop", "Notify",
     "Simulate", "Simulate off"
 ]
@@ -69,7 +71,7 @@ FindInstructionState = Literal[
 
 class EngineTestRunner:
     """ Expose an interface of Engine similar to what is available in the frontend to tests. """
-    def __init__(self, uod_factory: UodFactory, method: str | Mdl.Method = "", interval: float = 0.1, speed: float = 1.0,
+    def __init__(self, uod_argument: UodInstanceOrFactory, method: str | Mdl.Method = "", interval: float = 0.1, speed: float = 1.0,
                  fail_on_log_error=True,
                  raise_on_emit=False
         ) -> None:
@@ -77,8 +79,8 @@ class EngineTestRunner:
 
         Args:
             method: Method to run. The format should be either raw pcode, numbered pcode or pre-parsed
-        """ 
-        self.uod_factory = uod_factory
+        """
+        self.uod_factory = (lambda: uod_argument) if isinstance(uod_argument, UnitOperationDefinitionBase) else uod_argument
         self.method: str | Mdl.Method = method
         self.interval = interval
         self.speed = speed
@@ -111,6 +113,9 @@ class EngineTestInstance(EventListener):
     def __init__(self, engine: Engine, method: str | Mdl.Method, timing: EngineTiming) -> None:
         self.engine = engine
         self.timing = timing
+        # the time increment value to use for the first iteration where the previous tick time is not defined
+        # using interval makes timing more natural - but we need to test that the tags/timers work with it, if not we change it to 0
+        self._initial_increment = self.timing.interval
 
         self.engine.run(skip_timer_start=True)
         if isinstance(method, str):
@@ -132,6 +137,13 @@ class EngineTestInstance(EventListener):
         """ Schedules the Start command. run_* is required to actually run it """
         self.engine.schedule_execution(EngineCommandEnum.START)
         self.timing.timer.start()
+
+    def start_run(self):
+        """ Start a run making the runner ready for normal operation. """
+        assert self.engine._tick_number == -1
+        self.start()
+        self.run_ticks(1)
+        assert self.engine._tick_number == 0
 
     @property
     def marks(self) -> list[str]:
@@ -155,6 +167,51 @@ class EngineTestInstance(EventListener):
     def scope_node_history(self) -> list[str]:
         return list([scope.node_id for scope in self._scope_history])
 
+    def run_ticks(self, ticks: int, verbose=True, fail_on_log_error=True) -> int:
+        """ Continue program execution for the specified number of ticks. """
+
+        if verbose:
+            logger.info(f"Start waiting for {ticks} ticks")
+
+        error_log_handler = TestLogHandler(enabled=fail_on_log_error)
+
+        tick_index = 0
+        last_tick_time_mon = 0.0
+        increment = self._initial_increment
+        interval = self.timing.interval
+
+        while tick_index < ticks:
+            tick_time = time.time()
+            tick_time_mon = time.monotonic()
+            if tick_index > 0:
+                increment = tick_time_mon - last_tick_time_mon
+
+            # execute tick, with increment==0 on first iteration
+            self.engine.tick(tick_time, increment)
+
+            # # wait random time 1-10 times a tenth of a tick to stress test duration calculation
+            #secs = random.randint(0, 10) * 0.1 * 0.1
+            #logger.info(f"Sleeping {secs}")
+            #time.sleep(secs)
+
+            self._handle_error(error_log_handler)
+
+            last_tick_time_mon = tick_time_mon
+            tick_time_mon = time.monotonic()
+            elapsed = tick_time_mon - last_tick_time_mon
+            deadline = interval - elapsed
+            if deadline > 0.001:
+                time.sleep(deadline)
+            elif deadline < 0:
+                logger.warning(f"Sleep deadline for tick was negative: {deadline}")
+
+            tick_index += 1
+
+        if verbose:
+            logger.info(f"Done waiting for {ticks} ticks")
+        return tick_index
+
+
     def run_until_condition(self, condition: RunCondition, max_ticks=30, fail_on_log_error=True) -> int:
         """ Continue program until condition occurs. Return the number of ticks spent.
 
@@ -164,42 +221,48 @@ class EngineTestInstance(EventListener):
             return 0
 
         error_log_handler = TestLogHandler(enabled=fail_on_log_error)
-        ticks = 0
-        max_ticks_scaled = max_ticks * self.timing.speed
-        last_tick_time = 0.0
 
-        while not condition():
+        tick_index = 0
+        last_tick_time_mon = 0.0
+        increment = self._initial_increment
+        interval = self.timing.interval
+
+        while True:
             tick_time = time.time()
+            tick_time_mon = time.monotonic()
+            if tick_index > 0:
+                increment = tick_time_mon - last_tick_time_mon
 
-            ticks += 1
-            if ticks > max_ticks_scaled:
-                if max_ticks == max_ticks_scaled:
-                    raise TimeoutError(f"Condition did not occur within {max_ticks} ticks")
-                else:
-                    raise TimeoutError(
-                        f"Condition did not occur within {max_ticks_scaled} ticks, " +
-                        "(scaled from {max_ticks} using speed {self.speed})"
-                    )
-            increment = self.timing.interval
-            if last_tick_time > 0.0:
-                increment = tick_time - last_tick_time
-                self.engine.tick(tick_time, increment)
+            if condition():
+                return tick_index
 
-            last_tick_time = tick_time
-            elapsed = time.time() - last_tick_time
-            deadline = self.timing.interval - elapsed
-            if deadline > 0.0:
-                while last_tick_time+self.timing.interval-time.time() > 0:
-                    time.sleep(min(last_tick_time+self.timing.interval-time.time(), 0.01))
-            else:
+            if tick_index >= max_ticks:
+                raise TimeoutError(f"Condition did not occur within {max_ticks} ticks")
+
+            # execute tick, with increment==0 on first iteration
+            self.engine.tick(tick_time, increment)
+
+            self._handle_error(error_log_handler)
+
+            last_tick_time_mon = tick_time_mon
+            tick_time_mon = time.monotonic()
+            elapsed = tick_time_mon - last_tick_time_mon
+            deadline = interval - elapsed
+            if deadline > 0.001:
+                time.sleep(deadline)
+                # If doing this again, must use last_tick_time_mon
+                # while last_tick_time + interval - time.time() > 0:
+                #     time.sleep(min(last_tick_time + interval - time.time(), 0.01))
+            elif deadline < 0:
                 logger.warning(f"Sleep deadline for tick was negative: {deadline}")
 
-            if self.engine.has_error_state():
-                _handle_engine_error(self.engine)
-            else:
-                error_log_handler.raise_if_errors_encountered()
+            tick_index += 1
 
-        return ticks
+    def _handle_error(self, test_log_handler: TestLogHandler):
+        if self.engine.has_error_state():
+            _handle_engine_error(self.engine)
+        else:
+            test_log_handler.raise_if_errors_encountered()
 
     def _convert_FindInstruction_state_to_enum(self, state: FindInstructionState) -> RuntimeRecordStateEnum | None:
         # convert the easy-to-use literal into one of the enum states that find_instruction needs
@@ -268,6 +331,7 @@ class EngineTestInstance(EventListener):
             ticks = self.run_until_condition(cond, max_ticks=max_ticks)
         except TimeoutError:
             logger.error(self.get_runtime_table("At TimeoutError"))
+            logger.error(f"Timeout while waiting for instruction '{instruction_name}', state: {state}, arguments: {arguments}")
             raise TimeoutError(
                 f"Timeout while waiting for instruction '{instruction_name}', state: {state}, arguments: {arguments}")
 
@@ -355,24 +419,22 @@ class EngineTestInstance(EventListener):
             print("Waiting for started event")
             self.run_ticks(1)
 
-    def run_ticks(self, ticks: int, verbose=True) -> None:
-        """ Continue program execution until te specified number of ticks. """
-
-        if verbose:
-            logger.info(f"Start waiting for {ticks} ticks")
-        max_ticks = ticks + 1
-        try:
-            _ = self.run_until_condition(lambda: False, max_ticks)
-        except TimeoutError:
-            if verbose:
-                logger.info(f"Done waiting for {ticks} ticks")
-            return
-
-        raise ValueError("Could not wait??")
-
     def get_runtime_table(self, description: str = "") -> str:
         """ Return a text view of the runtime table contents. """
         return self.runtimeinfo.get_as_table(description)
+
+    @property
+    def logger(self):
+        return logger
+
+    def print_runtime_table(self, description=""):
+        """ Print a text view of the runtime table contents. """
+        table = self.runtimeinfo.get_as_table(description)
+        print(table)
+
+    def print_runlog(self, description=""):
+        """ Print a text view of the runlog lines. """
+        print_runlog(self.engine, description)
 
     # --- EventListener impl ----
 
@@ -401,7 +463,7 @@ class EngineTestInstance(EventListener):
             return
         scope = self._scopes[-1]
         if scope.node_id != scope_info.node_id or scope.scope_type != scope_info.scope_type or scope.argument != scope_info.argument:
-            logger.error("Scope error. Evenc scope_end was raised when a different scope was active")
+            logger.error("Scope error. Event scope_end was raised when a different scope was active")
             logger.error(f"Current scope: {scope}")
             logger.error(f"Scope to end: {scope_info}")
         else:
