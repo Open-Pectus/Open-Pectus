@@ -378,10 +378,10 @@ States:\n{states}""")
     def get_as_table(self, description: str = "") -> str:
         records = self.records.copy()
         lines = [f"Runtime records | {description}"]
-        lines.append("line | start | end   | runlog name           | node name            | states")
-        lines.append("-----|-------|-------|-----------------------|----------------------|-------------------")
+        lines.append("line | start | end   | runlog name                | node name            | states")
+        lines.append("-----|-------|-------|----------------------------|----------------------|-------------------")
         for r in records:
-            name = rjust(r.name or "", 20)
+            name = rjust(r.name or "", 25)
             arguments = next((st.arguments for st in r.states if len(st.arguments) > 0), "")
             node_name = rjust(arguments or r.node_class_name, 20)
 
@@ -390,7 +390,7 @@ States:\n{states}""")
             end = rjust(r.visit_end_tick if r.visit_end_tick > -1 else "-", 5)
             states = ", ".join([f"{st.state_name}: {st.state_tick}" for st in r.states])
             lines.append(f"{line}   {rjust(r.visit_start_tick, 5)}   {end}   {name}   {node_name}    {states}")
-        lines.append("-----|-------|-------|-----------------------|----------------------|-------------------")
+        lines.append("-----|-------|-------|----------------------------|----------------------|-------------------")
         return "\n".join(lines)
 
     def get_as_table_alt(self, description: str = "") -> str:

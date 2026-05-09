@@ -21,8 +21,7 @@ class SePath:
     interrupt visitor.
 
     The prefixed number is the line_id/node_id. Empty for root. The name is the
-    instruction name. The postfixed number is an index of the active child node
-    or invocation.
+    instruction name.
 
     The extra 'child.N' is used when traversing child nodes. Other extras are used
     in specific Node types, e.g. 'invocation.N' for macro and alarm invocations.
@@ -40,18 +39,18 @@ class SePath:
     @dataclass
     class Item:
         node_id: str
-        name: str
+        node_key: str
         extra: str = ""
 
         @staticmethod
         def from_node(node: p.Node, extra: str = "") -> SePath.Item:
-            return SePath.Item(node_id=node.id, name=node.name, extra=extra)
+            return SePath.Item(node_id=node.id, node_key=node.key, extra=extra)
 
         @property
         def key(self):
-            s = self.node_id
-            if self.node_id != "root":
-                s += "." + self.name
+            if self.node_id == "root" and self.extra == "":
+                return "root"
+            s = self.node_key
             if self.extra != "":
                 s += "." + self.extra
             return s
@@ -60,7 +59,7 @@ class SePath:
             return self.key
 
         def clone(self) -> SePath.Item:
-            return SePath.Item(node_id=self.node_id, name=self.name, extra=self.extra)
+            return SePath.Item(node_id=self.node_id, node_key=self.node_key, extra=self.extra)
 
     def __init__(self):
         self._items: list[SePath.Item] = []
@@ -72,19 +71,24 @@ class SePath:
         #     if node.id != last.node_id:
         #         raise ValueError(f"Cannot push item '{item.key}' onto path '{self.path}'")
         self._items.append(item)
-        logger.debug("Sep: " + str(self))
+        logger.debug("Sep: " + self.path)
 
     def pop(self) -> SePath.Item:
         if not any(self._items):
-            raise ValueError("SePath pop() stack underrun")
+            logger.error("SePath pop() stack underrun")
         item = self._items.pop()
-        #logger.debug("Sep - popped " + item.key + " | remaining path: " + str(self))
+        #logger.debug("Sep - popped " + item.key + " | remaining path: " + self.path)
+        if self.path == "":
+            logger.error("SePath post-pop() stack underrun")
         return item
 
     def peek(self) -> SePath.Item:
         if not any(self._items):
             raise ValueError("SePath peek() stack underrun")
         return self._items[-1]
+
+    def is_empty(self) -> bool:
+        return not any(self._items)
 
     @property
     def path(self) -> str:
@@ -117,14 +121,14 @@ class SePath:
         node_name = node_key[len(node_id) + 1:]
         for item in self._items:
             if item.node_id == node_id:
-                if item.name != node_name:
+                if item.node_key != node_name:
                     logger.warning(
                         f"SePath.has_node_key() found a node_id match for key '{node_key}' " +
-                        f"but the name '{node_name}' does not match the item name '{item.name}'")
+                        f"but the name '{node_name}' does not match the item name '{item.node_key}'")
                     if raise_on_id_only_match:
                         raise ValueError(
                             f"SePath.has_node_key() found a node_id match for key '{node_key}' " +
-                            f"but the name '{node_name}' does not match the item name '{item.name}'")
+                            f"but the name '{node_name}' does not match the item name '{item.node_key}'")
                 else:
                     return True
         return False

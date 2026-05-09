@@ -573,7 +573,6 @@ Alarm: Block Time > 0s
         Mark: A
     Wait: 0.5s
 """
-        
         runner = EngineTestRunner(create_test_uod_local, program)
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
@@ -593,6 +592,54 @@ Alarm: Block Time > 0s
             instance.run_until_condition(lambda: instance.marks == ["A", "A", "A"])
 
             self.assert_Runlog_HasItem_Completed(alarm_item_name, 2)  # verify we waited long enough
+
+    def test_runlog_watch_states(self):
+        program = """\
+01 Watch: Block Time > 0.2s
+02     Mark: A
+03 Mark: X
+"""
+        runner = EngineTestRunner(create_test_uod_local, program)
+        with runner.run() as instance:
+            self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
+            instance.start_run()
+            instance.run_until_instruction("Watch", state="awaiting_condition", increment_index=False)
+
+            instance.print_runtime_table("Awaiting condition")
+
+            r = instance.runtimeinfo.get_record_by_node("01")
+            assert r is not None
+
+            self.assertEqual("Watch: Block Time > 0.2s", r.name)
+            self.assertTrue(r.has_state(RuntimeRecordStateEnum.AwaitingCondition))
+
+            instance.run_until_instruction("Watch", state="started", increment_index=False)
+
+            self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
+
+            instance.run_until_instruction("Watch", state="completed", increment_index=False)
+            self.assertTrue(r.has_state(RuntimeRecordStateEnum.Completed))
+
+            instance.print_runtime_table("Watch completed")
+
+
+    def test_runlog_uod_commands(self):
+        program = """
+Reset
+Reset
+Reset
+"""
+
+        runner = EngineTestRunner(create_test_uod_local, program)
+        with runner.run() as instance:
+            self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
+            instance.start_run()
+            instance.run_ticks(10)
+
+            instance.print_runtime_table()
+            instance.print_runlog()
+
+
 
     def test_runlog_item_awaiting_threshold_is_not_rendered(self):
         program = """

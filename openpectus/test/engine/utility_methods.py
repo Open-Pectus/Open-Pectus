@@ -568,6 +568,48 @@ def continue_engine(engine: Engine, max_ticks: int = -1, fail_on_log_error=True)
             error_log_handler.raise_if_errors_encountered()
         ticks += 1
 
+def continue_engine_until(engine: Engine, condition: Callable[[], bool], max_ticks: int = -1, fail_on_log_error=True) -> int:
+    global last_tick_time, interval
+    print("Interpretation continuing until condition")
+    ticks = 1
+    error_log_handler = TestLogHandler(enabled=fail_on_log_error)
+
+    if condition():
+        return 0
+
+    while True:
+        tick_time = time.time()
+
+        if condition():
+            print(f"Stopping because condition was True")
+            return ticks
+
+        if ticks > max_ticks:
+            print(f"Stopping because max_ticks {max_ticks} was reached")
+            return ticks
+
+        increment = 0
+        if last_tick_time > 0.0:
+            increment = tick_time - last_tick_time
+
+        # execute tick even with 0 increment
+        engine.tick(tick_time, increment)
+
+        last_tick_time = tick_time
+        elapsed = time.time() - last_tick_time
+        deadline = interval - elapsed
+        if deadline > 0.0:
+            while last_tick_time+interval-time.time() > 0:
+                time.sleep(min(last_tick_time+interval-time.time(), 0.01))
+        else:
+            logger.warning(f"Sleep deadline for tick was negative: {deadline}")
+
+        if engine.has_error_state():
+            _handle_engine_error(engine)
+        else:
+            error_log_handler.raise_if_errors_encountered()
+        ticks += 1
+
 
 def print_runlog(e: Engine, description=""):
     runlog = e.interpreter.runtimeinfo.get_runlog()

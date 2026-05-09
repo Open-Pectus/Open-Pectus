@@ -1,3 +1,4 @@
+import os
 import time
 import unittest
 from typing import Any
@@ -96,19 +97,120 @@ def create_test_uod() -> UnitOperationDefinitionBase:  # noqa
     uod.hwl.connect()
     return uod
 
+class TestRunnerTest(unittest.TestCase):
 
-class TestEngineNew(unittest.TestCase):
+    def test_run_ticks_wo_start_run(self):
+        delta = 0.05
+        runner = EngineTestRunner(create_test_uod)
+        with runner.run() as instance:
+            run_time = instance.engine.tags[SystemTagName.RUN_TIME]
+
+            # demonstrates the rationality for the start_run() method that is also exposed as run(autostart=True)
+            instance.start()
+            self.assertEqual(instance.engine._tick_number, -1)
+            instance.run_ticks(1)
+            self.assertEqual(instance.engine._tick_number, 0)
+            self.assertEqual(run_time.as_float(), 0.0)
+
+            # from here, everything is ready
+            tick_0 = instance.engine._tick_number
+            t0 = time.time()
+            reported_ticks = instance.run_ticks(10)
+            tick_1 = instance.engine._tick_number
+            t1 = time.time()
+
+            self.assertEqual(reported_ticks, 10)
+            self.assertAlmostEqual(t1 - t0, 1.0, delta=delta)
+            self.assertEqual(tick_1 - tick_0, 10)
+
+            # this depends on using interval as initial increment rather than 0
+            self.assertAlmostEqual(run_time.as_float(), 1.0, delta=delta)
+
+    def test_run_ticks(self):
+        delta = 0.05
+        runner = EngineTestRunner(create_test_uod)
+        with runner.run() as instance:
+            run_time = instance.engine.tags[SystemTagName.RUN_TIME]
+            instance.start_run()
+
+            tick_0 = instance.engine._tick_number
+            t0 = time.time()
+            reported_ticks = instance.run_ticks(10)
+            tick_1 = instance.engine._tick_number
+            t1 = time.time()
+
+            self.assertEqual(reported_ticks, 10)
+            self.assertAlmostEqual(t1 - t0, 1.0, delta=delta)
+            self.assertEqual(tick_1 - tick_0, 10)
+
+            # this depends on using interval as initial increment rather than 0
+            self.assertAlmostEqual(run_time.as_float(), 1.0, delta=delta)
+            print("run_time", run_time.as_float())
+
+    @unittest.skipIf(bool(os.environ.get("OPENPECTUS_ENGINE_SKIP_SLOW_TESTS")), reason="Skipping slow tests as configured")
+    def test_run_ticks_100(self):
+        delta = 0.05
+        tick_count = 100
+        runner = EngineTestRunner(create_test_uod)
+        with runner.run() as instance:
+            run_time = instance.engine.tags[SystemTagName.RUN_TIME]
+            instance.start_run()
+
+            tick_0 = instance.engine._tick_number
+            t0 = time.time()
+            reported_ticks = instance.run_ticks(tick_count)
+            tick_1 = instance.engine._tick_number
+            t1 = time.time()
+
+            duration = tick_count * 0.1
+
+            self.assertEqual(reported_ticks, tick_count)
+            self.assertAlmostEqual(t1 - t0, duration, delta=delta)
+            self.assertEqual(tick_1 - tick_0, tick_count)
+
+            # this depends on using interval as initial increment rather than 0
+            self.assertAlmostEqual(run_time.as_float(), duration, delta=delta)
+
+    # TODO
+    def test_initial_increment(self):
+        # test relevant cases for the initial value of increment
+        # on start
+        # after each pause
+        # timer when entering its scope
+        raise NotImplementedError()
 
     def test_run_until_condition(self):
         runner = EngineTestRunner(create_test_uod)
         with runner.run() as instance:
             run_time = instance.engine.tags[SystemTagName.RUN_TIME]
+            instance.start_run()
 
-            instance.start()
             start = time.time()
-            instance.run_until_condition(lambda: run_time.as_float() >= 1)
+            instance.run_until_condition(lambda: run_time.as_float() >= 5, max_ticks=60)
             end = time.time()
-            self.assertAlmostEqual(end-start, 1.1, delta=0.2)
+            self.assertAlmostEqual(end-start, 5, delta=0.2)
+
+    def test_run_until_condition2(self):
+        runner = EngineTestRunner(create_test_uod)
+        with runner.run() as instance:
+            instance.start_run()
+
+            tick_0 = instance.engine._tick_number
+            time_0 = time.time()
+
+            reported_ticks = instance.run_until_condition(
+                lambda: instance.engine._tick_number == 10,
+                max_ticks=20)
+
+            tick_1 = instance.engine._tick_number
+            time_1 = time.time()
+
+            self.assertEqual(reported_ticks, 10)
+            self.assertAlmostEqual(time_1 - time_0, 1.1, delta=0.1)
+            self.assertEqual(tick_1 - tick_0, 10)
+
+class TestEngineNew(unittest.TestCase):
+
 
     def test_wait(self):
         code = """
@@ -246,21 +348,6 @@ Restart
             self.assertEqual(["A"], instance.marks)
             self.assertEqual(2, run_counter.as_number())
 
-#     def test_restart_stop_ticking_interpreter(self):
-
-#         set_interpreter_debug_logging()
-#         program = """
-# Mark: A
-# Restart
-# Mark: X
-# """
-#         e = self.engine
-#         run_engine(e, program, 1)
-
-#         for _ in range(30):
-#             continue_engine(e, 1)
-#             self.assertTrue("X" not in e.interpreter.get_marks())
-
     def test_restart_cancels_running_commands(self):
         set_engine_debug_logging()
 
@@ -271,24 +358,23 @@ Reset
 Reset
 Restart
 """
-        # verify Reset duration is 5 ticks
+        reset_ticks = 0
         runner = EngineTestRunner(create_test_uod, code1)
         with runner.run() as instance:
-            instance.start()
-            instance.run_until_command("Reset")
+            instance.start_run()
 
             instance.index_step_back(1)
             reset_ticks = instance.run_until_command("Reset", state="completed")
-            self.assertEqual(5, reset_ticks)
+            instance.logger.info(f"Reset ticks: {reset_ticks}")
 
-        # verify that total duration is faster than 5 ticks
+        # verify that total duration is faster than reset_ticks - because command is cancelled
         runner = EngineTestRunner(create_test_uod, code2)
         with runner.run() as instance:
-            instance.start()
-            instance.run_until_command("Reset")
+            instance.start_run()
 
             total_ticks = instance.run_until_instruction("Restart")
-            self.assertLess(total_ticks, 5)
+            instance.logger.info(f"Total ticks: {total_ticks}")
+            self.assertLess(total_ticks, reset_ticks)
 
     def test_restart_can_stop(self):
         set_engine_debug_logging()

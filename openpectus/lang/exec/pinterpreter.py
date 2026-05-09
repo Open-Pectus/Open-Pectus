@@ -19,10 +19,8 @@ from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import TagCollection, SystemTagName
 from openpectus.lang.exec.visitor import NodeGenerator, NodeVisitor, VisitResult
 import openpectus.lang.model.ast as p
-from openpectus.lang.exec.interpreter_models import (
-    SePath, InterpreterState,
-    Interrupt, InterruptState,
-)
+from openpectus.lang.exec.interpreter_models import SePath, Interrupt
+
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +57,7 @@ class PInterpreter(NodeVisitor):
         self._tick_time: float = 0
         self._tick_number: int = -1
 
-        self._generator: NodeGenerator | None = None
+        self._generator: NodeGenerator = self.visit(program)
         self._in_interrupt = False
 
         self.runtimeinfo: RuntimeInfo = runtimeinfo
@@ -69,6 +67,7 @@ class PInterpreter(NodeVisitor):
         self.main_sep: SePath = SePath()
         self._sep: SePath = self.main_sep
 
+        self._last_error: tuple[Exception, p.Node | None] | None = None
         logger.debug("Interpreter initialized")
 
 
@@ -91,7 +90,7 @@ class PInterpreter(NodeVisitor):
 # region Creation and state
 
     # these are all in MethodManager
-    
+
 # endregion Creation Creation and state
 
     def get_marks(self) -> list[str]:
@@ -129,24 +128,31 @@ class PInterpreter(NodeVisitor):
 
     def stop(self):
         self._program.reset_runtime_state(recursive=True)
-    
 
 # region Tick
 
     def tick(self, tick_time: float, tick_number: int):
         logger.debug(f"Tick: {tick_number}")
         # this runs the tick with subticks in proper order
-        for _ in self.tick_iterate_subticks(tick_time, tick_number):
-            pass
+        try:
+            for _ in self.tick_iterate_subticks(tick_time, tick_number):
+                pass
+        except Exception as ex:
+            if self._last_error is None:
+                self._last_error = ex, None
+            else:
+                logger.warning(f"Secondary error during tick: {str(ex)}")
+
+        if self._last_error is not None:
+            ex, node = self._last_error
+            if node is not None:
+                raise NodeInterpretationError(node, str(ex))
+            else:
+                raise InterpretationError(str(ex))
 
     def tick_iterate_subticks(self, tick_time: float, tick_number: int) -> Iterable[SePath]:
         self._tick_time = tick_time
         self._tick_number = tick_number
-
-        if self._generator is None:
-            # logger.debug("Creating generator")
-            assert self._program is not None
-            self._generator = self.visit(self._program)
 
         # Run 1 tick worth of sub-ticks of main generator and each interrupt generator. This means make as many next()
         # calls as it takes for each generator to return VisitResult.EndTick or VisitResult.IteratorExhausted. This        
@@ -191,80 +197,9 @@ class PInterpreter(NodeVisitor):
                     self._in_interrupt = False
                     self._sep = self.main_sep
 
-            yield self.main_sep        
+            yield self.main_sep
 
 # endregion Tick
-
-    def old_tick(self, tick_time: float, tick_number: int):  # noqa C901
-        self._tick_time = tick_time
-        self._tick_number = tick_number
-
-        logger.debug(f"Tick {self._tick_number}")
-
-        if self._generator is None:
-            self._generator = self.visit_ProgramNode(self._program)
-
-        # execute one iteration of program
-        assert self._generator is not None
-        try:
-            run_tick(self._generator)
-        except StopIteration:
-            logger.debug("Main generator exhausted")
-            pass
-        except NodeInterpretationError as ex:
-            self.tracking.mark_failed(ex.node)
-            raise
-        except AssertionError as ae:
-            if self._program.active_node is not None:
-                self._program.active_node.failed = True
-                self.tracking.mark_failed(self._program.active_node)
-                raise NodeInterpretationError(self._program.active_node, message=str(ae)) from ae
-            raise InterpretationError(message=str(ae)) from ae
-        except InterpretationInternalError:
-            raise
-        except InterpretationError:
-            # TODO should we have this? are there node-non-specific general errors? so that we can not try
-            # fixing them with an edit? If it is that bad, why isn't it an internal error then?
-            raise
-        except EngineError:  # a method call on context failed - engine will know what to do
-            raise
-        except Exception as ex:
-            logger.error("Unhandled interpretation error", exc_info=True)
-            raise InterpretationError("Interpreter error") from ex
-
-        # execute one iteration of each interrupt
-        interrupts = list(self._interrupts_map.values())
-        for interrupt in interrupts:
-            logger.debug(f"Executing interrupt tick for node {interrupt.node}")
-            try:
-                self._in_interrupt = True
-                run_tick(interrupt.actions)
-            except StopIteration:
-                logger.debug(f"Interrupt generator {interrupt.node} exhausted")
-                if isinstance(interrupt.node, p.AlarmNode):
-                    logger.debug(f"Restarting completed Alarm {interrupt.node}")
-                    interrupt.node.run_count += 1
-                    self._unregister_interrupt(interrupt.node)
-                    interrupt.node.reset_runtime_state(recursive=True)
-                    self._register_interrupt(interrupt.node)
-            except NodeInterpretationError as ex:
-                ex.node.failed = True
-                self.tracking.mark_failed(ex.node)
-                raise
-            except AssertionError as ae:
-                if self._program.active_node is not None:
-                    self._program.active_node.failed = True
-                    self.tracking.mark_failed(self._program.active_node)
-                    raise NodeInterpretationError(self._program.active_node, message=str(ae))
-                raise InterpretationError(message=str(ae)) from ae
-            except (InterpretationInternalError, InterpretationError):
-                logger.error("Interpreter error in interrupt handler", exc_info=True)
-                raise
-            except Exception as ex:
-                logger.error("Unhandled interpretation error in interrupt handler", exc_info=True)
-                raise InterpretationError("Interpreter error") from ex
-            finally:
-                self._in_interrupt = False
 
 # region General visit
 
@@ -275,13 +210,18 @@ class PInterpreter(NodeVisitor):
             yield VisitResult.ContinueTick
             return
 
+        # create record on first visit
         record = self.runtimeinfo.get_record_by_node(node.id)
         if record is None:
             record = self.runtimeinfo.begin_visit(
                 node,
                 self._tick_time, self._tick_number,
                 self.context.tags.as_readonly())
-        # possibly wait for node threshold to expire
+
+        # create instance_id for every visit to support recurring visits from
+        # alarm/macro nodes and their child nodes
+        self.tracking.create_node_instance_id(node)
+
         if not node.started and not node.completed:
             if self._is_awaiting_threshold(node):
                 self.tracking.mark_awaiting_threshold(node)
@@ -292,12 +232,14 @@ class PInterpreter(NodeVisitor):
         # threshold has passed
         node.started = True
         self.sep.push(node)
-        #logger.debug(f"Enter node: {node}, in_interrupt: {self._in_interrupt}")
-        
-        result = super().visit(node)
-        yield from result
 
-        #logger.debug(f"Leave node: {node}, in_interrupt: {self._in_interrupt}")
+        try:
+            result = super().visit(node)
+            yield from result
+        except Exception as ex:
+            node.failed = True
+            self._last_error = ex, node
+
         self.sep.pop()
 
         record = self.runtimeinfo.get_record_by_node(node.id)
@@ -314,6 +256,7 @@ class PInterpreter(NodeVisitor):
             yield VisitResult.ContinueTick
             return
 
+        self.context.emitter.emit_on_block_start("root", self._tick_number)
         self.context.emitter.emit_on_scope_start(node.id, "Program", "")
         self.context.emitter.emit_on_scope_activate(node.id, "Program", "")
 
@@ -326,8 +269,8 @@ class PInterpreter(NodeVisitor):
         logger.debug("ProgramNode now idle")
 
         if self.main_sep.path != "root":
-            logger.error(f"Main path expected to contain only 'root' - was {self.main_sep}")
-            raise Exception(f"Main path expected to contain only 'root' - was {self.main_sep}")
+            logger.error(f"Main path expected to be 'root' - was '{self.main_sep}'")
+            raise Exception(f"Main path expected be 'root' - was '{self.main_sep}'")
 
         # Never return from the visit of ProgramNode. This makes it possible to inject or edit code at the bottom of 
         # the method which will then be added as new child nodes of the ProgramNode.
@@ -378,13 +321,14 @@ class PInterpreter(NodeVisitor):
         # remain non-started
         if node.has_only_trailing_whitespace:
             node.started = False
-            self.sep.push(node, "idle")
+            #self.sep.push(node, "idle")
 
-        while node.has_only_trailing_whitespace:            
+        while node.has_only_trailing_whitespace:
             yield VisitResult.EndTick
-        
+
         node.started = True
-        self.sep.pop()
+        # if self.sep.peek().node_key == node.key:
+        #     self.sep.pop()
         yield VisitResult.ContinueTick
 
         node.completed = True
@@ -512,11 +456,11 @@ class PInterpreter(NodeVisitor):
         if not node.block_ended:
             if not node.lock_acquired:
                 self.sep.push(node, "acquire_lock")
-                yield VisitResult.ContinueTick                
-            
+                yield VisitResult.ContinueTick
+
             while not node.lock_acquired:
                 try_acquire_lock()
-                
+
                 if node.lock_acquired:
                     self.sep.pop()
                     self.context.tags[SystemTagName.BLOCK].set_value(node.name, self._tick_number)
@@ -677,7 +621,7 @@ class PInterpreter(NodeVisitor):
                     assert record is not None
                     record.progress = progress
                 yield VisitResult.EndTick
-            self._sep.pop()            
+            self.sep.pop()
 
         else:  # unknown InterpreterCommandNode instruction
             self.tracking.mark_failed(node)
@@ -698,7 +642,9 @@ class PInterpreter(NodeVisitor):
 
 
     def visit_EngineCommandNode(self, node: p.EngineCommandNode) -> NodeGenerator:
-        instance_id = self.tracking.create_node_instance_id(node)
+        # TODO this seems to work well. clean it up
+        #instance_id = self.tracking.create_node_instance_id(node)
+        instance_id = self.tracking.get_record_by_instance(node).last_instance_id
 
         # Note: Commands can be resident and last multiple ticks.
         # The context (Engine) keeps track of this and we just
@@ -752,7 +698,8 @@ class PInterpreter(NodeVisitor):
 
 
     def visit_UodCommandNode(self, node: p.UodCommandNode) -> NodeGenerator:
-        instance_id = self.tracking.create_node_instance_id(node)
+        #instance_id = self.tracking.create_node_instance_id(node)
+        instance_id = self.tracking.get_record_by_instance(node).last_instance_id
 
         # Note: Uod Commands can be resident and last multiple ticks just like Engine Commands.
         try:
@@ -785,17 +732,27 @@ class PInterpreter(NodeVisitor):
 
         assert self._in_interrupt
 
+        if node.cancelled:
+            logger.debug(f"Node {node} cancelled before awaiting activation")
+            return
+
         if not node.activated:
-            self.tracking.create_node_instance_id(node)
+            #self.tracking.create_node_instance_id(node)
             self.tracking.mark_awaiting_condition(node)
             self.sep.push(node, "await_activation")
             while not node.activated:
+                if node.cancelled:
+                    logger.debug(f"Node {node} cancelled while awaiting activation")
+                    self.sep.pop()
+                    return
                 self._try_activate_node(node)
                 yield VisitResult.EndTick
             self.sep.pop()
 
         self.sep.push(node, "invocation")
-        yield VisitResult.ContinueTick  # allows waiting for invocation path        
+        if node.cancelled:
+            logger.warning(f"Node {node} cancelled during invocation. This is too late - will run anyway")
+        yield VisitResult.ContinueTick  # allows waiting for invocation path
         self.context.emitter.emit_on_scope_activate(node.id, "Watch", node.arguments)
         self.tracking.mark_started(node)
         yield from self._visit_children(node)
@@ -829,9 +786,10 @@ class PInterpreter(NodeVisitor):
         #     node.awaiting_condition = True
 
         if not node.activated:
-            self.tracking.create_node_instance_id(node)
+            #self.tracking.create_node_instance_id(node)
             self.tracking.mark_awaiting_condition(node)
             self.sep.push(node, "await_activation")
+            # TODO consider yield ContinueTick to allow waiting for await_activation path
             while not node.activated:
                 self._try_activate_node(node)
                 yield VisitResult.EndTick
@@ -845,7 +803,6 @@ class PInterpreter(NodeVisitor):
         yield from self._visit_children(node)
         self.sep.pop()
         #node.completed = True
-        
         yield VisitResult.ContinueTick
 
 
@@ -879,13 +836,14 @@ class PInterpreter(NodeVisitor):
         # avoid advancing generator into whitespace-only code lines
         if node.has_only_trailing_whitespace:
             node.started = False
-            self.sep.push(node, "idle")
+            #self.sep.push(node, "idle")
 
-        while node.has_only_trailing_whitespace:            
+        while node.has_only_trailing_whitespace:
             yield VisitResult.EndTick
         
         node.started = True
-        self.sep.pop()
+        # if self.sep.peek().node_key == node.key:
+        #     self.sep.pop()
         yield VisitResult.ContinueTick
 
         node.completed = True
@@ -896,15 +854,30 @@ class PInterpreter(NodeVisitor):
         if __debug__:
             # enable the Noop (no operation) instruction used in tests
             if node.instruction_name == "Noop":
+                try:
+                    count = int(node.arguments or "1")
+                except Exception:
+                    logger.warning(f"Noop argument '{node.arguments}' is not a number. Defaulting to count=1")
+                    count = 1
+                logger.debug(f"Noop: Initialized to a total of {count} ticks")
                 self.tracking.mark_started(node)
-                yield VisitResult.ContinueTick
+
+                for index in range(count):
+                    # Note: iteration state is non-persistent because it does not use node state,
+                    # unlike child iteration which uses child_index. This just means that in live-edit,
+                    # iteration just continues because interpreter maintains the iterator state, whereas
+                    # when starting from persisted state, it starts over.
+                    logger.debug(f"Noop: Executing tick {index + 1} of {count}")
+                    if index < count - 1:
+                        yield VisitResult.EndTick
+                logger.debug(f"Noop: completed {count} ticks")
                 self.tracking.mark_completed(node)
-                yield VisitResult.EndTick
+                yield VisitResult.ContinueTick
                 return
 
         logger.error(f"Invalid instruction: {str(node)}:\n{node.line}")
         self.tracking.mark_started(node)
-        self.tracking.mark_failed(node)
+        self.tracking.mark_failed(node) # TODO remove - should be handled generically in the exception handler
         raise NodeInterpretationError(node, f"Invalid instruction '{node.name}'")
 
 # endregion Concrete visits

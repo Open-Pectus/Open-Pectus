@@ -20,6 +20,7 @@ from openpectus.lang.exec.uod import (
     UodBuilder,
     RegexNamedArgumentParser
 )
+from openpectus.test.engine.test_helpers import TestHW
 from openpectus.test.engine.utility_methods import (
     EngineTestRunner, continue_engine, continue_engine_until, run_engine,
     configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging,
@@ -523,7 +524,6 @@ class TestEngine(unittest.TestCase):
 
     def test_concurrent_uod_commands(self):
         self.engine.cleanup()  # dispose the test default engine
-        
         code = """\
 Reset
 Reset
@@ -554,7 +554,6 @@ Reset
 
     def test_overlapping_uod_commands(self):
         self.engine.cleanup()  # dispose the test default engine
-        
         code = """\
 overlap1
 overlap2
@@ -584,41 +583,6 @@ overlap2
             self.assertTrue(not r2.has_state(RuntimeRecordStateEnum.Forced))
             self.assertTrue(not r2.has_state(RuntimeRecordStateEnum.Completed))
 
-
-    # AssertionError: 'Watch: Block Time > 0.2s' != 'Block Time > 0.2s'
-    # r.name is incorrect
-    def test_runlog_watch(self):
-        program = """
-Watch: Block Time > 0.2s
-    Mark: A
-Mark: X
-"""
-        e = self.engine
-        run_engine(e, program, 4)
-
-        print_runtime_records(e)
-
-        r = e.tracking.records[1]
-        self.assertEqual("Watch: Block Time > 0.2s", r.name)
-        self.assertTrue(r.has_state(RuntimeRecordStateEnum.AwaitingCondition))
-
-        continue_engine(e, 1)
-        self.assertTrue(r.has_state(RuntimeRecordStateEnum.Started))
-
-        continue_engine(e, 1)
-        self.assertTrue(r.has_state(RuntimeRecordStateEnum.Completed))
-
-        print_runtime_records(e)
-
-    def test_runlog_uod_commands(self):
-        e = self.engine
-        run_engine(e, """
-Reset
-Reset
-Reset
-""", 10)
-
-        print_runtime_records(e)
 
     def test_clocks(self):
         e = self.engine
@@ -891,310 +855,6 @@ Mark: b
         self.assertFalse(danger_tag.get_value())
 
 
-    # --- Totalizers ---
-
-
-    def test_totalizer_base_units_no_accumulator_allows_time_unit(self):
-        e = self.engine
-
-        run_engine(e, "Base: s\n0.1 Mark: A", 5)
-        self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.OK)
-
-    def test_totalizer_base_units_no_accumulator_disallows_volume_unit(self):
-        e = self.engine
-        with self.assertRaises(EngineError):
-            run_engine(e, "Base: L\n0.1 Mark: A", 5)
-        self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
-
-    def test_totalizer_base_units_with_accumulator_volume(self):
-        self.engine.cleanup()  # dispose the test default engine
-
-        uod = (UodBuilder()
-               .with_instrument("TestUod")
-               .with_author("Test Author", "test@openpectus.org")
-               .with_filename(__file__)
-               .with_hardware(TestHW())
-               .with_location("Test location")
-               .with_tag(ReadingTag("Meter", "L"))
-               .with_accumulated_volume(totalizer_tag_name="Meter")
-               .build())
-
-        with self.subTest("allows_time_unit"):
-            with create_engine_context(uod) as e:
-                run_engine(e, "Base: s\n0.1 Mark: A", 5)
-                self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.OK)
-
-        with self.subTest("allows_volume_unit"):
-            with create_engine_context(uod) as e:
-                run_engine(e, "Base: L\n0.1 Mark: A", 5)
-                self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.OK)
-
-        with self.subTest("disallows_cv_unit"):
-            with create_engine_context(uod) as e:
-                with self.assertRaises(EngineError):
-                    run_engine(e, "Base: CV\n0.1 Mark: A", 5)
-                self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
-
-    def test_totalizer_base_units_with_accumulator_cv(self):
-        self.engine.cleanup()  # dispose the test default engine
-
-        uod = (UodBuilder()
-               .with_instrument("TestUod")
-               .with_author("Test Author", "test@openpectus.org")
-               .with_filename(__file__)
-               .with_hardware(TestHW())
-               .with_location("Test location")
-               .with_tag(ReadingTag("Meter", "L"))
-               .with_tag(ReadingTag("CV", "L"))
-               .with_accumulated_cv(cv_tag_name="CV", totalizer_tag_name="Meter")
-               .build())
-
-        uod.tags["CV"].set_value(1.0, 0)
-
-        with self.subTest("allows_time_unit"):
-            with create_engine_context(uod) as e:
-                run_engine(e, "Base: s\n0.1 Mark: A", 5)
-                self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.OK)
-
-        with self.subTest("disallows_volume_unit"):
-            with create_engine_context(uod) as e:
-                with self.assertRaises(EngineError):
-                    run_engine(e, "Base: L\n0.1 Mark: A", 5)
-                self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.ERROR)
-
-        with self.subTest("allows_cv_unit"):
-            with create_engine_context(uod) as e:
-                run_engine(e, "Base: CV\n0.1 Mark: A", 5)
-                self.assertEqual(e.tags[SystemTagName.METHOD_STATUS].get_value(), MethodStatusEnum.OK)
-
-
-    def test_accumulated_volume(self):
-        self.engine.cleanup()  # dispose the test default engine
-
-        uod = (UodBuilder()
-               .with_instrument("TestUod")
-               .with_author("Test Author", "test@openpectus.org")
-               .with_filename(__file__)
-               .with_hardware(TestHW())
-               .with_location("Test location")
-               .with_tag(CalculatedLinearTag("calc", "L"))
-               .with_accumulated_volume(totalizer_tag_name="calc")
-               .build())
-
-        program = """
-Base: s
-1 Mark: A
-        """
-        with create_engine_context(uod) as e:
-            acc_vol = e.tags[SystemTagName.ACCUMULATED_VOLUME]
-            run_engine(e, program, 1)
-
-            self.assertEqual(acc_vol.as_float(), 0.0)
-            self.assertEqual(acc_vol.unit, "L")
-
-            t0 = e._clock.get_time()
-            continue_engine(e, 10)
-            t1 = e._clock.get_time()
-
-            self.assertAlmostEqual(t1 - t0, 1, delta=0.1)
-            self.assertAlmostEqual(acc_vol.as_float(), 1, delta=0.1)
-
-    # TODO still fails
-    def test_accumulated_block_volume(self):
-        self.engine.cleanup()  # dispose the test default engine
-        delta = 0.15
-        set_interpreter_debug_logging()
-
-        uod = (UodBuilder()
-               .with_instrument("TestUod")
-               .with_author("Test Author", "test@openpectus.org")
-               .with_filename(__file__)
-               .with_hardware(TestHW(connected=True))
-               .with_location("Test location")
-               .with_tag(CalculatedLinearTag("calc", "L"))
-               .with_accumulated_volume(totalizer_tag_name="calc")
-               .build())
-
-        program = """\
-Base: s
-Wait: 0.45s
-Block: A
-    0.85 End block
-0.45 Mark: A
-        """
-        runner = EngineTestRunner(lambda: uod, program)
-        with runner.run() as instance:
-            
-            acc_vol = instance.engine.tags[SystemTagName.ACCUMULATED_VOLUME]
-            block_vol = instance.engine.tags[SystemTagName.BLOCK_VOLUME]
-            block = instance.engine.tags[SystemTagName.BLOCK]
-
-            instance.run_ticks(3)
-            #run_engine(e, program, 1)
-            self.assertEqual(block.get_value(), None)
-
-            self.assertEqual(acc_vol.as_float(), 0.0)
-            self.assertEqual(acc_vol.unit, "L")
-            self.assertEqual(block_vol.as_float(), 0.0)
-            self.assertEqual(block_vol.unit, "L")
-
-            continue_engine(e, 1)  # Base
-            self.assertEqual(block.get_value(), None)
-            self.assertAlmostEqual(acc_vol.as_float(), 0.1, delta=delta)
-            self.assertAlmostEqual(block_vol.as_float(), 0.1, delta=delta)
-
-            continue_engine(e, 5)  # Wait
-            self.assertEqual(block.get_value(), None)
-            self.assertAlmostEqual(acc_vol.as_float(), 0.7, delta=delta)
-            self.assertAlmostEqual(block_vol.as_float(), 0.7, delta=delta)
-
-            continue_engine(e, 1)  # Block
-            self.assertEqual(block.get_value(), "A")
-            self.assertAlmostEqual(acc_vol.as_float(), 0.8, delta=delta)
-            self.assertAlmostEqual(block_vol.as_float(), 0.1, delta=delta)
-
-            continue_engine(e, 8)
-            self.assertEqual(block.get_value(), "A")
-            self.assertAlmostEqual(acc_vol.as_float(), 1.6, delta=delta)
-            self.assertAlmostEqual(block_vol.as_float(), 0.9, delta=delta)
-
-            continue_engine(e, 1)
-            self.assertEqual(block.get_value(), None)
-            # acc_vol keeps counting
-            self.assertAlmostEqual(acc_vol.as_float(), 1.7, delta=delta)
-            # block_vol is reset to value before block A - so it matches acc_vol again
-            self.assertAlmostEqual(block_vol.as_float(), 1.7, delta=delta)
-
-    def test_accumulated_column_volume(self):
-        self.engine.cleanup()  # dispose the test default engine
-
-        uod = (UodBuilder()
-               .with_instrument("TestUod")
-               .with_author("Test Author", "test@openpectus.org")
-               .with_filename(__file__)
-               .with_hardware(TestHW())
-               .with_location("Test location")
-               .with_tag(ReadingTag("CV", "L"))
-               .with_tag(CalculatedLinearTag("calc", "L"))
-               .with_accumulated_cv(cv_tag_name="CV", totalizer_tag_name="calc")
-               .build())
-
-        program = """
-Base: s
-1 Mark: A
-"""
-        with create_engine_context(uod) as e:
-            cv = e.tags["CV"]
-            cv.set_value(2.0, 0)
-            acc_cv = e.tags[SystemTagName.ACCUMULATED_CV]
-            run_engine(e, program, 1)
-
-            self.assertEqual(acc_cv.as_float(), 0.0)
-            self.assertEqual(acc_cv.unit, "CV")
-
-            t0 = e._clock.get_time()
-            continue_engine(e, 10)
-            t1 = e._clock.get_time()
-
-            self.assertAlmostEqual(t1 - t0, 1, delta=0.1)
-            self.assertAlmostEqual(acc_cv.as_float(), 1/2, delta=0.1)
-
-    def test_accumulated_column_volume_base(self):
-        self.engine.cleanup()  # dispose the test default engine
-
-        uod = (UodBuilder()
-               .with_instrument("TestUod")
-               .with_author("Test Author", "test@openpectus.org")
-               .with_filename(__file__)
-               .with_hardware(TestHW())
-               .with_location("Test location")
-               .with_tag(ReadingTag("CV", "L"))
-               .with_tag(CalculatedLinearTag("calc", "L"))
-               .with_accumulated_cv(cv_tag_name="CV", totalizer_tag_name="calc")
-               .build())
-
-        program = """
-Base: CV
-0.5 Mark: A
-"""
-        with create_engine_context(uod) as e:
-            cv = e.tags["CV"]
-            cv.set_value(2.0, 0)
-            acc_cv = e.tags[SystemTagName.ACCUMULATED_CV]
-            run_engine(e, program, 1)
-
-            self.assertEqual(acc_cv.as_float(), 0.0)
-            self.assertEqual(acc_cv.unit, "CV")
-
-            continue_engine(e, 4)
-            self.assertAlmostEqual(acc_cv.as_float(), 0.2, delta=0.1)
-            self.assertEqual([], e.interpreter.get_marks())
-
-            continue_engine(e, 4)
-            self.assertAlmostEqual(acc_cv.as_float(), 0.4, delta=0.1)
-            self.assertEqual([], e.interpreter.get_marks())
-
-            continue_engine(e, 4)
-            self.assertAlmostEqual(acc_cv.as_float(), 0.6, delta=0.1)
-            self.assertEqual(['A'], e.interpreter.get_marks())
-
-    def test_accumulated_column_block_volume(self):
-        # TODO flaky - even in dev
-        self.engine.cleanup()  # dispose the test default engine
-
-        uod = (UodBuilder()
-               .with_instrument("TestUod")
-               .with_author("Test Author", "test@openpectus.org")
-               .with_filename(__file__)
-               .with_hardware(TestHW())
-               .with_location("Test location")
-               .with_tag(ReadingTag("CV", "L"))
-               .with_tag(CalculatedLinearTag("calc", "L"))
-               .with_accumulated_cv(cv_tag_name="CV", totalizer_tag_name="calc")
-               .build())
-
-        program = """\
-Base: s
-Block: A
-    0.45 End block
-0.45 Mark: A
-        """
-        with create_engine_context(uod) as e:
-            cv = e.tags["CV"]
-            cv.set_value(2.0, 0)
-            acc_cv = e.tags[SystemTagName.ACCUMULATED_CV]
-            block_cv = e.tags[SystemTagName.BLOCK_CV]
-            block = e.tags[SystemTagName.BLOCK]
-            run_engine(e, program, 1)
-
-            self.assertEqual(acc_cv.as_float(), 0.0)
-            self.assertEqual(acc_cv.unit, "CV")
-            self.assertEqual(block_cv.as_float(), 0.0)
-            self.assertEqual(block_cv.unit, "CV")
-
-            continue_engine(e, 1)  # Base
-            self.assertEqual(block.get_value(), None)
-            self.assertAlmostEqual(acc_cv.as_float(), 0.2/2, delta=0.1)
-            self.assertAlmostEqual(block_cv.as_float(), 0.2/2, delta=0.1)
-
-            continue_engine(e, 2)  # Block
-            self.assertEqual(block.get_value(), "A")
-            self.assertAlmostEqual(acc_cv.as_float(), 0.3/2, delta=0.1)
-            self.assertAlmostEqual(block_cv.as_float(), 0.1/2, delta=0.1)
-
-            continue_engine(e, 3)
-            self.assertEqual(block.get_value(), "A")
-            self.assertAlmostEqual(acc_cv.as_float(), 0.7/2, delta=0.1)
-            self.assertAlmostEqual(block_cv.as_float(), 0.5/2, delta=0.1)
-
-            continue_engine(e, 1)
-            self.assertEqual(block.get_value(), None)
-            # acc_vol keeps counting
-            self.assertAlmostEqual(acc_cv.as_float(), 0.8/2, delta=0.1)
-            # block_vol is reset to value before block A - so it matches acc_vol again
-            self.assertAlmostEqual(block_cv.as_float(), 0.8/2, delta=0.1)
-
-
     # --- Units ---
 
 
@@ -1240,50 +900,6 @@ Block: A
         with self.assertRaises(EngineError):
             run_engine(e, """Watch x > 2""", 5)
         self.assertTrue(e._runstate_paused)
-
-
-# Test helpers
-
-
-class TestHW(HardwareLayerBase):
-    __test__ = False
-
-    def __init__(self, connected: bool = False) -> None:
-        super().__init__()
-        self.register_values = {}
-        self._is_connected = connected
-
-    @override
-    def read(self, r: Register) -> Any:
-        if r.name in self.registers.keys() and r.name in self.register_values.keys():
-            return self.register_values[r.name]
-        return None
-
-    @override
-    def write(self, value: Any, r: Register):
-        if r.name in self.registers.keys():
-            self.register_values[r.name] = value
-
-    @override
-    def connect(self):
-        self._is_connected = True
-
-    @override
-    def disconnect(self):
-        self._is_connected = False
-
-
-class CalculatedLinearTag(Tag):
-    """ Test tag that is used to simulate a value that is a linear function of time. """
-    def __init__(self, name: str, unit: str | None, slope: float = 1.0) -> None:
-        super().__init__(name, value=0.0, unit=unit, direction=TagDirection.NA)
-        self.slope = slope
-
-    def on_start(self, run_id: str):
-        self.value = time.time() * self.slope
-
-    def on_tick(self, tick_time: float, increment_time: float):
-        self.value = time.time() * self.slope
 
 
 if __name__ == "__main__":

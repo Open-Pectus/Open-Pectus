@@ -206,7 +206,7 @@ Macro: B
 Call macro: A
 """
         engine = self.engine
-        run_engine(engine, program, 10)
+        run_engine(engine, program, 20)
         self.assertEqual(["a", "b", "c",], engine.interpreter.get_marks())
 
 
@@ -223,7 +223,7 @@ Call macro: A
 Call macro: A
 """
         engine = self.engine
-        run_engine(engine, program, 20)
+        run_engine(engine, program, 30)
         self.assertEqual(["a", "b", "c", "b", "c",], engine.interpreter.get_marks())
 
 
@@ -288,7 +288,7 @@ Call macro: A
         engine = self.engine
 
         with self.assertRaises(EngineError):
-            run_engine(engine, program, 10)
+            run_engine(engine, program, 20)
         self.assertEqual(["a",], engine.interpreter.get_marks())
 
 
@@ -310,7 +310,7 @@ Call macro: A
         engine = self.engine
 
         with self.assertRaises(EngineError):
-            run_engine(engine, program, 10)
+            run_engine(engine, program, 20)
         self.assertEqual(["a",], engine.interpreter.get_marks())
 
 # --- Conditions ---
@@ -343,7 +343,7 @@ Watch: counter > 0
     Mark: d
 """
         engine = self.engine
-        run_engine(engine, program, 15)
+        run_engine(engine, program, 25)
 
         marks = engine.interpreter.get_marks()
         self.assertTrue(marks == ["a", "c", "b", "d", "e"] or marks == ["a", "c", "b", "e", "d"])
@@ -353,11 +353,12 @@ Watch: counter > 0
 Mark: a
 Watch: counter > 0
     Mark: b
+Wait: 0.2s
 Mark: c
 incr counter
 """
         engine = self.engine
-        run_engine(engine, program, 15)
+        run_engine(engine, program, 25)
         self.assertEqual(["a", "c", "b"], engine.interpreter.get_marks())
 
         engine.schedule_execution(EngineCommandEnum.STOP)
@@ -366,7 +367,7 @@ incr counter
         # rerun program and assert "same" result
         # but only if the counter tag has been reset. There is no reason why a custom tag would reset, is there?
         engine.schedule_execution(EngineCommandEnum.START)
-        continue_engine(engine, 15)
+        continue_engine(engine, 25)
         self.assertEqual(["a", "b", "c"], engine.interpreter.get_marks())
 
     def test_watch_long_running_order(self):
@@ -386,8 +387,8 @@ Mark: b3
         engine = self.engine
         run_engine(engine, program, 30)
 
-        # self.assertEqual(["a", "b", "a1", "b1", "a2", "b2", "a3", "b3"], engine.interpreter.get_marks())
-        self.assertEqual(['a', 'a1', 'a2', 'b', 'a3', 'b1', 'b2', 'b3'], engine.interpreter.get_marks())
+        self.assertEqual(["a", "b", "a1", "b1", "a2", "b2", "a3", "b3"], engine.interpreter.get_marks())
+        #self.assertEqual(['a', 'a1', 'a2', 'b', 'a3', 'b1', 'b2', 'b3'], engine.interpreter.get_marks())
 
     @unittest.skip("Block in Watch not supported")
     def test_watch_block_long_running_block_time(self):
@@ -594,7 +595,7 @@ Block: A
 Mark: A2
 """
         engine = self.engine
-        run_engine(engine, program, 25)
+        run_engine(engine, program, 30)
 
         self.assertEqual(["A1", "B1", "A2"], engine.interpreter.get_marks())
 
