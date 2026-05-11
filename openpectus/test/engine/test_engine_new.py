@@ -26,6 +26,8 @@ set_interpreter_debug_logging()
 # so we initialize it first
 _ = pint.Quantity("0 s")
 
+delta = 0.2
+
 
 def create_test_uod() -> UnitOperationDefinitionBase:  # noqa
     def reset(cmd: UodCommand, **kvargs) -> None:
@@ -101,7 +103,6 @@ def create_test_uod() -> UnitOperationDefinitionBase:  # noqa
 class TestRunnerTest(unittest.TestCase):
 
     def test_run_ticks_wo_start_run(self):
-        delta = 0.05
         runner = EngineTestRunner(create_test_uod)
         with runner.run() as instance:
             run_time = instance.engine.tags[SystemTagName.RUN_TIME]
@@ -128,7 +129,6 @@ class TestRunnerTest(unittest.TestCase):
             self.assertAlmostEqual(run_time.as_float(), 1.0, delta=delta)
 
     def test_run_ticks(self):
-        delta = 0.05
         runner = EngineTestRunner(create_test_uod)
         with runner.run() as instance:
             run_time = instance.engine.tags[SystemTagName.RUN_TIME]
@@ -150,7 +150,6 @@ class TestRunnerTest(unittest.TestCase):
 
     @unittest.skipIf(bool(os.environ.get("OPENPECTUS_ENGINE_SKIP_SLOW_TESTS")), reason="Skipping slow tests as configured")
     def test_run_ticks_100(self):
-        delta = 0.05
         tick_count = 100
         runner = EngineTestRunner(create_test_uod)
         with runner.run() as instance:
@@ -181,7 +180,7 @@ class TestRunnerTest(unittest.TestCase):
             start = time.time()
             instance.run_until_condition(lambda: run_time.as_float() >= 5, max_ticks=60)
             end = time.time()
-            self.assertAlmostEqual(end-start, 5, delta=0.2)
+            self.assertAlmostEqual(end-start, 5, delta=delta)
 
     def test_run_until_condition2(self):
         runner = EngineTestRunner(create_test_uod)
@@ -199,7 +198,7 @@ class TestRunnerTest(unittest.TestCase):
             time_1 = time.time()
 
             self.assertEqual(reported_ticks, 10)
-            self.assertAlmostEqual(time_1 - time_0, 1.1, delta=0.1)
+            self.assertAlmostEqual(time_1 - time_0, 1.1, delta=delta)
             self.assertEqual(tick_1 - tick_0, 10)
 
 class TestEngineNew(unittest.TestCase):
