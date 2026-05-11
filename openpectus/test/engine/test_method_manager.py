@@ -1253,7 +1253,7 @@ Watch: Run counter > 0
             assert watch_node.failed
             assert instance.engine.has_error_state()
 
-            print_runtime_records(instance.engine, "Error has just occurred")
+            instance.print_runtime_table("Error has just occurred")
 
             method_corrected = Method.from_numbered_pcode("""\
 00 Info: Start
@@ -1263,7 +1263,7 @@ Watch: Run counter > 0
             # User edits and clicks Save
             instance.engine.set_method(method_corrected)
 
-            print_runtime_records(instance.engine, "Method corrected")
+            instance.print_runtime_table("Method corrected")
 
             assert not instance.engine.has_error_state()
             watch_node = instance.method_manager.program.get_child_by_id("01")

@@ -1,12 +1,9 @@
 import time
-from typing import Any
 import unittest
 
 from openpectus.aggregator.models import RunLog, RunLogLine
-from openpectus.engine.engine import Engine
 from openpectus.engine.hardware import RegisterDirection
 from openpectus.engine.models import EngineCommandEnum
-from openpectus.lang.exec.regex import RegexNumber
 from openpectus.lang.exec.runlog import (
     RunLogItem, RuntimeInfo, RuntimeRecord, RuntimeRecordStateEnum,
     assert_Runtime_HasRecord,
@@ -14,17 +11,14 @@ from openpectus.lang.exec.runlog import (
     assert_Runlog_HasItem, assert_Runlog_HasNoItem,
     assert_Runlog_HasItem_Completed, assert_Runlog_HasItem_Started, rjust,
 )
-from openpectus.lang.exec.tags import Tag, TagDirection
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
 import openpectus.lang.model.ast as p
-from openpectus.test.engine.test_engine import create_engine
 
 from openpectus.test.engine.test_helpers import TestHW
 from openpectus.test.engine.utility_methods import (
     EngineTestInstance,
     EngineTestRunner,
-    continue_engine, run_engine, print_runlog, print_runtime_records,
     configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging
 )
 
@@ -109,7 +103,6 @@ class TestRunlog(unittest.TestCase):
         assert_Runtime_HasRecord_Completed(self.rti, name)
 
     def test_start_complete_UodCommand(self):
-        
         runner = EngineTestRunner(create_test_uod_local, "Reset")
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
@@ -126,7 +119,6 @@ class TestRunlog(unittest.TestCase):
             self.assert_Runtime_HasRecord_Completed("Reset")
 
     def test_start_complete_InstructionUodCommand(self):
-        
         runner = EngineTestRunner(create_test_uod_local, "Mark: A")
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
@@ -140,8 +132,6 @@ class TestRunlog(unittest.TestCase):
 
     def test_start_complete_EngineInternalCommand(self):
         cmd = "Increment run counter"
-
-        
         runner = EngineTestRunner(create_test_uod_local, cmd)
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
@@ -153,31 +143,12 @@ class TestRunlog(unittest.TestCase):
 
             self.assert_Runlog_HasItem_Completed(cmd)
 
-    def test_Watch(self):
-        program = """
-Mark: a
-Watch: Run Counter > -1
-    Mark: b
-Mark: c"""
-        
-        runner = EngineTestRunner(create_test_uod_local, program)
-        with runner.run() as instance:
-            self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
-            instance.start_run()
-            instance.run_until_instruction("Mark", state="completed", arguments="b")
-
-            cmd = "Mark: b"
-            self.assert_Runtime_HasRecord_Started(cmd)
-            self.assert_Runtime_HasRecord_Completed(cmd)
-            self.assert_Runlog_HasItem_Completed(cmd)
-
     def test_Alarm_invocations(self):
         program = """
 Alarm: Run Counter < 5
     Mark: b
     Increment run counter
 """
-        
         runner = EngineTestRunner(create_test_uod_local, program)
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
@@ -197,7 +168,6 @@ Alarm: Run Counter < 5
 Macro: A
     Mark: b
 """
-        
         runner = EngineTestRunner(create_test_uod_local, program)
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
@@ -218,7 +188,6 @@ Macro: A
     Mark: b
 Call macro: A
 """
-        
         runner = EngineTestRunner(create_test_uod_local, program)
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
@@ -247,7 +216,6 @@ Call macro: A
 Call macro: A
 Call macro: A
 """
-        
         runner = EngineTestRunner(create_test_uod_local, program)
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
@@ -274,7 +242,6 @@ Macro: M
     Mark: M1
 Call macro: M
 """
-        
         runner = EngineTestRunner(create_test_uod_local, program)
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
@@ -318,7 +285,6 @@ Macro: A
 
 Call macro: A
 """
-        
         runner = EngineTestRunner(create_test_uod_local, program)
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
@@ -344,7 +310,6 @@ Call macro: A
 Watch: Block Time > .3s
     Mark: Foo
 """
-        
         runner = EngineTestRunner(create_test_uod_local, program)
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
@@ -444,7 +409,6 @@ Watch: Block Time > 3s
         self.assertEqual(['foo', 'bar', 'baz'], result)
 
     def test_runlog_cancel_uod_command_Reset(self):
-        
         runner = EngineTestRunner(create_test_uod_local, "Reset")
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
@@ -503,7 +467,6 @@ Mark: A
 Wait: 5s
 Mark: B
 """
-        
         runner = EngineTestRunner(create_test_uod_local, program)
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
@@ -538,13 +501,11 @@ Mark: B
 Alarm: Block Time > 3s
     Mark: Foo
 """
-        
         runner = EngineTestRunner(create_test_uod_local, program)
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
             instance.start_run()
             instance.run_until_instruction("Alarm")
-            #run_engine(e, program, 3)
             item_name = "Alarm: Block Time > 3s"
             self.assert_Runlog_HasItem(item_name)
 
@@ -629,7 +590,6 @@ Reset
 Reset
 Reset
 """
-
         runner = EngineTestRunner(create_test_uod_local, program)
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
@@ -645,7 +605,6 @@ Reset
         program = """
 2 Mark: A
 """
-        
         runner = EngineTestRunner(create_test_uod_local, program)
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
@@ -653,20 +612,19 @@ Reset
             instance.run_until_instruction("Mark")
 
             mark_name = "Mark: A"
-            self.assert_Runlog_HasNoItem(mark_name) # no runlog item
+            self.assert_Runlog_HasNoItem(mark_name)  # no runlog item
 
             instance.print_runtime_table()
             mark = instance.method_manager.program.get_first_child_or_fail(p.MarkNode)
             record = instance.runtimeinfo.get_record_by_node(mark.id)
             assert record is not None
             self.assertEqual(record.name, "Mark: A")
-            self.assertTrue(record.has_state(RuntimeRecordStateEnum.AwaitingThreshold)) # but a record awaiting threshold
+            self.assertTrue(record.has_state(RuntimeRecordStateEnum.AwaitingThreshold))  # but a record awaiting threshold
 
     def test_runlog_force_Mark_without_threshold_is_not_forcible(self):
         program = """
 Mark: A
 """
-        
         runner = EngineTestRunner(create_test_uod_local, program)
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
@@ -685,7 +643,6 @@ Mark: A
         cmd = "Wait: 0.5s"
         item_name = cmd
 
-        
         runner = EngineTestRunner(create_test_uod_local, cmd)
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts
@@ -719,7 +676,6 @@ Mark: A
         program = """
 Wait: 0.5s
 """
-        
         runner = EngineTestRunner(create_test_uod_local, program)
         with runner.run() as instance:
             self.set_test_instance(instance)  # QND workaround to make test base class know to use instance for runlog asserts

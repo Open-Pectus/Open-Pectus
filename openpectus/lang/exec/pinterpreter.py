@@ -644,7 +644,8 @@ class PInterpreter(NodeVisitor):
     def visit_EngineCommandNode(self, node: p.EngineCommandNode) -> NodeGenerator:
         # TODO this seems to work well. clean it up
         #instance_id = self.tracking.create_node_instance_id(node)
-        instance_id = self.tracking.get_record_by_instance(node).last_instance_id
+        instance_id = self.tracking.get_record_by_instance(node).last_instance_id  # type: ignore
+        assert instance_id is not None
 
         # Note: Commands can be resident and last multiple ticks.
         # The context (Engine) keeps track of this and we just
@@ -699,7 +700,8 @@ class PInterpreter(NodeVisitor):
 
     def visit_UodCommandNode(self, node: p.UodCommandNode) -> NodeGenerator:
         #instance_id = self.tracking.create_node_instance_id(node)
-        instance_id = self.tracking.get_record_by_instance(node).last_instance_id
+        instance_id = self.tracking.get_record_by_instance(node).last_instance_id  # type: ignore
+        assert instance_id is not None
 
         # Note: Uod Commands can be resident and last multiple ticks just like Engine Commands.
         try:
