@@ -4,7 +4,7 @@ name: Combined Workflows
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "842-previously-executed-block-is-re-run-after-edit" ]
   pull_request:
     branches: [ "main" ]
 

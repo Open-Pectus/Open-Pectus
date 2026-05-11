@@ -97,6 +97,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:  # noqa
     uod.hwl.connect()
     return uod
 
+# Note: These tests are affected by the runner's _initial_increment.
 class TestRunnerTest(unittest.TestCase):
 
     def test_run_ticks_wo_start_run(self):
@@ -170,14 +171,6 @@ class TestRunnerTest(unittest.TestCase):
 
             # this depends on using interval as initial increment rather than 0
             self.assertAlmostEqual(run_time.as_float(), duration, delta=delta)
-
-    # TODO
-    def test_initial_increment(self):
-        # test relevant cases for the initial value of increment
-        # on start
-        # after each pause
-        # timer when entering its scope
-        raise NotImplementedError()
 
     def test_run_until_condition(self):
         runner = EngineTestRunner(create_test_uod)

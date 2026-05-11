@@ -113,8 +113,19 @@ class EngineTestInstance(EventListener):
     def __init__(self, engine: Engine, method: str | Mdl.Method, timing: EngineTiming) -> None:
         self.engine = engine
         self.timing = timing
-        # the time increment value to use for the first iteration where the previous tick time is not defined
-        # using interval makes timing more natural - but we need to test that the tags/timers work with it, if not we change it to 0
+
+        # The time increment value to use for the first iteration of run_until_*() methods where the previous tick time is not defined.
+        # Using interval makes timing more natural than when using a value of 0.
+        #
+        # The concept at play is that tags and other event consumers use the 'increment_time' argument of the on_tick event to
+        # determine time passed. This allows pausing time in various ways, eg. the Pause instruction or timers going in and out of
+        # scope. Whenever the run is continued, the first tick must use a 'last value' to calculate increment_time and this value
+        # must be constructed to avoid including the pause duration in increment_time (which would cause a large and incorrect spike
+        # in the time perceived by the tag).
+        #
+        # In the production code, this is different because increment_time is zero on first tick and then never again and tags handle
+        # 'pause' to determine when to increment their timers. But in tests there is an implicit pause whenever a run_until_* method
+        # ends so the next run_until_* method must use a proper value for increment_time.
         self._initial_increment = self.timing.interval
 
         self.engine.run(skip_timer_start=True)
@@ -123,7 +134,7 @@ class EngineTestInstance(EventListener):
                 method = Mdl.Method.from_numbered_pcode(method)
             else:
                 method = Mdl.Method.from_pcode(method)
-            
+
         self.engine.set_method(method)
 
         self._search_index = 0

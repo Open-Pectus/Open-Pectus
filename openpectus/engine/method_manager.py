@@ -204,8 +204,8 @@ class MethodManager:
 
         # handle versions before converting _new_method
         old_version = self._method.version
-        if _new_method.version == 0:            
-            _new_method.version = old_version + 1            
+        if _new_method.version == 0:
+            _new_method.version = old_version + 1
             logger.debug(f"New method has no version specified, using {_new_method.version} " +
                          "which is the old version incremented by 1")
         elif _new_method.version == old_version:

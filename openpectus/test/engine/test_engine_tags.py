@@ -108,6 +108,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:  # noqa C901
     return uod
 
 
+# Note: These tests are affected by the runner's _initial_increment.
 class TestEngineTags(unittest.TestCase):
     # ---------- Lifetime -------------
     def test_tag_process_time(self):
@@ -388,6 +389,50 @@ Block: B1
 
             instance.run_until_event("block_start")
             self.assertAlmostEqual(0, block_time.as_number(), delta=delta)  # nested timer is also reset
+
+    def test_tag_block_time_pause(self):
+        program = """\
+Wait: 0.3s
+Pause: 1s
+Block: B1
+    Wait: 0.4s
+    Pause: 2s
+    End block
+Mark: A
+"""
+        delta = 0.2
+        runner = EngineTestRunner(create_test_uod, program)
+        with runner.run() as instance:
+            e = instance.engine
+            instance.start_run()
+            run_time = e.tags[SystemTagName.RUN_TIME]
+            block_time = e.tags[SystemTagName.BLOCK_TIME]
+            block = e.tags[SystemTagName.BLOCK]
+
+            t1 = instance.run_until_instruction("Pause", state="completed", arguments="1s")
+            t1_time = t1/10
+            # self.assertAlmostEqual(t1_time, 1.7, delta=delta)  # don't depend on this
+            self.assertAlmostEqual(run_time.as_float(), t1_time, delta=delta)
+            self.assertAlmostEqual(block_time.as_float(), t1_time - 1.0, delta=delta)
+
+            t2 = instance.run_until_instruction("Block", state="started")
+            t2_time = t2/10
+            self.assertAlmostEqual(run_time.as_float(), t1_time + t2_time, delta=delta)
+            self.assertEqual("B1", block.get_value())
+            self.assertAlmostEqual(block_time.as_number(), 0, delta=delta)
+
+            t3 = instance.run_until_instruction("Pause", state="completed", arguments="2s")
+            t3_time = t3/10
+            self.assertAlmostEqual(run_time.as_float(), t1_time + t2_time + t3_time, delta=delta)
+            self.assertAlmostEqual(block_time.as_number(), t3_time - 2.0, delta=delta)
+
+            t4 = instance.run_until_event("method_end")
+            t4_time = t4/10
+            self.assertAlmostEqual(run_time.as_float(), t1_time + t2_time + t3_time + t4_time, delta=delta)
+            self.assertEqual(None, block.get_value())
+            self.assertAlmostEqual(block_time.as_number(),
+                                   t1_time - 1.0 + t3_time - 2.0 + t4_time,
+                                   delta=delta)
 
     def test_tag_unit_conversion_handled_by_pint(self):
         program = """\
