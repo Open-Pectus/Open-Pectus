@@ -30,8 +30,8 @@ Mark: C
 """
         program = parse_program(code)
         visitor = NodeVisitor()
-        for node in visitor.visit(program):
-            print(node)
+        for _ in visitor.visit(program):
+            pass
 
 
     def test_can_navigate_demo(self):

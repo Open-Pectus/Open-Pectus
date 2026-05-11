@@ -538,15 +538,16 @@ class Engine(InterpreterContext):
 
         try:
             if self._runstate_started and self.method_manager.program_is_started:
-                logger.info(f"Method changed while running. Current revision {self.method_manager.program.revision}")
+                logger.info(f"Method changed while running. Current version {self.method_manager.program.version}")
                 try:
                     self._method_manager.merge_method(method)
-                    logger.info(f"Method merged successfully. Revision is now {self.method_manager.program.revision}")
+                    logger.info(f"Method merged successfully. Version is now {self.method_manager.program.version}")
 
                     # consider the edit an attempt to fix error state
                     if self.has_error_state():
                         self.clear_error_state()
 
+                    self.emitter.emit_on_method_edited(live_edit=True)
                     return "merge_method"
                 except Exception:
                     logger.error("Error merging method")
@@ -555,7 +556,8 @@ class Engine(InterpreterContext):
                 logger.info("Setting new method")
                 try:
                     self._method_manager.set_method(method)
-                    logger.info(f"Method set successfully. Revision is {self.method_manager.program.revision}")
+                    logger.info(f"Method set successfully. Version is {self.method_manager.program.version}")
+                    self.emitter.emit_on_method_edited(live_edit=False)
                     return "set_method"
                 except Exception:
                     logger.error("Error setting method")
