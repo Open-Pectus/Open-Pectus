@@ -154,7 +154,9 @@ class Labjack_Hardware(HardwareLayerBase):
             raise HardwareLayerException(f"Unable to read {r}. Labjack error: {error}.")
 
     def read_batch(self, registers: Sequence[Register]) -> list[Any]:
-        """ Read batch of register values with a single OPC-UA call. """
+        """ Read batch of register values with a single LabJack call. """
+        if len(registers) == 0:
+            return []
         for r in registers:
             if RegisterDirection.Read not in r.direction:
                 raise HardwareLayerException(f"Attempt to read unreadable register {r}.")
