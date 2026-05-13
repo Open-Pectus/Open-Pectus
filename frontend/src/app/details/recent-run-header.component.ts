@@ -17,7 +17,7 @@ import { DetailsSelectors } from './ngrx/details.selectors';
         <span>Contributions by: <b>{{ formatContributors(recentRun()) }}</b></span>
         <span>Uod author: <b>{{ recentRun()?.uod_author_name }} <{{ recentRun()?.uod_author_email }}></b></span>
       </div>
-      <h1 class="text-4xl lg:text-5xl font-bold">{{ recentRun()?.engine_id }}</h1>
+      <h1 class="text-4xl lg:text-5xl font-bold">{{ recentRun()?.engine_name }}</h1>
 
       <div class="absolute top-0 right-0 flex gap-3">
         <button class="px-3 py-1.5 rounded-md bg-sky-900 text-white flex items-center"
