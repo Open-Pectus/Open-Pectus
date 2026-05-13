@@ -223,6 +223,7 @@ export type RecentRun = {
     run_id: string;
     started_date: string;
     completed_date: string;
+    uod_name: string;
     uod_filename: string;
     uod_author_name: string;
     uod_author_email: string;
@@ -232,6 +233,7 @@ export type RecentRun = {
     aggregator_computer_name: string;
     aggregator_version: string;
     contributors?: Array<Contributor>;
+    readonly engine_name: string;
 };
 
 export type RecentRunArchive = {
