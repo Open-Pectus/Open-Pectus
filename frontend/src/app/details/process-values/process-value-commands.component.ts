@@ -1,16 +1,4 @@
-import { NgFor, NgIf } from '@angular/common';
-import {
-  AfterViewInit,
-  ChangeDetectionStrategy,
-  Component,
-  ElementRef,
-  EventEmitter,
-  Input,
-  Output,
-  QueryList,
-  ViewChild,
-  ViewChildren,
-} from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, input, output, viewChild, viewChildren } from '@angular/core';
 import { produce } from 'immer';
 import { ProcessValueCommand } from '../../api';
 import { ProcessValueCommandButtonComponent } from './process-value-command-button.component';
@@ -20,45 +8,49 @@ import { ProcessValueEditorComponent, ValueAndUnit } from './process-value-edito
 type FocusableCommandComponent = ProcessValueCommandButtonComponent | ProcessValueEditorComponent | ProcessValueCommandChoiceComponent;
 
 @Component({
-    selector: 'app-process-value-commands',
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [
-        NgFor,
-        NgIf,
-        ProcessValueEditorComponent,
-        ProcessValueCommandChoiceComponent,
-        ProcessValueCommandButtonComponent,
-    ],
-    template: `
+  selector: 'app-process-value-commands',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    ProcessValueEditorComponent,
+    ProcessValueCommandChoiceComponent,
+    ProcessValueCommandButtonComponent
+  ],
+  template: `
     <div tabindex="0" #container
          class="absolute left-1/2 -translate-x-1/2 top-0.5 z-10 flex flex-col gap-3 p-3 bg-white border-4 border-sky-50 outline outline-1 outline-slate-500 rounded-md shadow-lg shadow-slate-500"
          (blur)="onBlur($event)">
 
-      <ng-container *ngFor="let command of processValueCommands">
-        <app-process-value-editor #focusableElement *ngIf="shouldUseEditor(command)" [command]="command" (inputBlur)="onBlur($event)"
-                                  (save)="onEditorSave($event, command)"></app-process-value-editor>
-        <app-process-value-command-choice #focusableElement [command]="command" *ngIf="shouldUseChoice(command)" (buttonBlur)="onBlur($event)"
-                                          (choiceMade)="onChoiceMade($event, command)"></app-process-value-command-choice>
-        <app-process-value-command-button #focusableElement [command]="command" *ngIf="shouldUseButton(command)" (buttonBlur)="onBlur($event)"
-                                          (click)="$event.stopPropagation(); onButtonClick(command)"></app-process-value-command-button>
-      </ng-container>
+      @for (command of processValueCommands(); track command) {
+        @if (shouldUseEditor(command)) {
+          <app-process-value-editor #focusableElement [command]="command" (inputBlur)="onBlur($event)"
+                                    (save)="onEditorSave($event, command)"/>
+        }
+        @if (shouldUseChoice(command)) {
+          <app-process-value-command-choice #focusableElement [command]="command" (buttonBlur)="onBlur($event)"
+                                            (choiceMade)="onChoiceMade($event, command)"/>
+        }
+        @if (shouldUseButton(command)) {
+          <app-process-value-command-button #focusableElement [command]="command" (buttonBlur)="onBlur($event)"
+                                            (click)="$event.stopPropagation(); onButtonClick(command)"/>
+        }
+      }
     </div>
   `
 })
 export class ProcessValueCommandsComponent implements AfterViewInit {
-  @Output() shouldClose = new EventEmitter<ProcessValueCommand | undefined>();
-  @Input() processValueCommands?: ProcessValueCommand[];
-  @ViewChild('container', {static: true}) container!: ElementRef<HTMLDivElement>;
-  @ViewChildren('focusableElement') focusableElements!: QueryList<FocusableCommandComponent>;
+  readonly shouldClose = output<ProcessValueCommand | undefined>();
+  readonly processValueCommands = input<ProcessValueCommand[]>();
+  readonly container = viewChild.required<ElementRef<HTMLDivElement>>('container');
+  readonly focusableElements = viewChildren<FocusableCommandComponent>('focusableElement');
 
   ngAfterViewInit() {
-    this.focusableElements.first?.focus();
+    this.focusableElements().at(0)?.focus();
   }
 
   onBlur(event: FocusEvent) {
     // only close if it is not one of our subelements buttons or editors receiving focus.
-    if((event.relatedTarget as Element | null)?.compareDocumentPosition(this.container.nativeElement) === 10) return;
-    this.shouldClose.emit();
+    if((event.relatedTarget as Element | null)?.compareDocumentPosition(this.container().nativeElement) === 10) return;
+    this.shouldClose.emit(undefined);
   }
 
   onButtonClick(command: ProcessValueCommand) {

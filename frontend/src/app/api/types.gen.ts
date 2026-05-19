@@ -86,9 +86,9 @@ export type MethodLine = {
 };
 
 export type MethodState = {
-    started_line_ids: Array<(string)>;
-    executed_line_ids: Array<(string)>;
-    injected_line_ids: Array<(string)>;
+    started_line_ids: Array<string>;
+    executed_line_ids: Array<string>;
+    injected_line_ids: Array<string>;
 };
 
 export type MethodVersion = {
@@ -106,7 +106,7 @@ export type NotOnline = {
 
 export type PlotAxis = {
     label: string;
-    process_value_names: Array<(string)>;
+    process_value_names: Array<string>;
     y_max: (number);
     y_min: (number);
     color: string;
@@ -115,15 +115,15 @@ export type PlotAxis = {
 export type PlotColorRegion = {
     process_value_name: string;
     value_color_map: {
-        [key: string]: (string);
+        [key: string]: string;
     };
 };
 
 export type PlotConfiguration = {
-    process_value_names_to_annotate: Array<(string)>;
+    process_value_names_to_annotate: Array<string>;
     color_regions: Array<PlotColorRegion>;
     sub_plots: Array<SubPlot>;
-    x_axis_process_value_names: Array<(string)>;
+    x_axis_process_value_names: Array<string>;
 };
 
 export type PlotLog = {
@@ -193,7 +193,7 @@ export type ProcessValueCommand = {
 export type ProcessValueCommandChoiceValue = {
     value: string;
     value_type: "choice";
-    options: Array<(string)>;
+    options: Array<string>;
 };
 
 export type ProcessValueCommandFreeTextValue = {
@@ -204,7 +204,7 @@ export type ProcessValueCommandFreeTextValue = {
 export type ProcessValueCommandNumberValue = {
     value: (number);
     value_unit?: string;
-    valid_value_units?: Array<(string)>;
+    valid_value_units?: Array<string>;
     value_type: ("int" | "float");
 };
 
@@ -224,6 +224,7 @@ export type RecentRun = {
     run_id: string;
     started_date: string;
     completed_date: string;
+    uod_name: string;
     uod_filename: string;
     uod_author_name: string;
     uod_author_email: string;
@@ -233,6 +234,7 @@ export type RecentRun = {
     aggregator_computer_name: string;
     aggregator_version: string;
     contributors?: Array<Contributor>;
+    readonly engine_name: string;
 };
 
 export type RecentRunArchive = {
@@ -308,7 +310,7 @@ export type WebPushKeys = {
 export type WebPushNotificationPreferences = {
     scope: NotificationScope;
     topics: Array<NotificationTopic>;
-    process_units: Array<(string)>;
+    process_units: Array<string>;
 };
 
 export type WebPushSubscription = {
