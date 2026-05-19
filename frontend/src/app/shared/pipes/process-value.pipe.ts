@@ -1,5 +1,5 @@
 import { DecimalPipe } from '@angular/common';
-import { Pipe, PipeTransform } from '@angular/core';
+import { Pipe, PipeTransform, inject } from '@angular/core';
 import { ProcessValue, ProcessValueCommandChoiceValue, ProcessValueCommandFreeTextValue, ProcessValueCommandNumberValue } from '../../api';
 import { UtilMethods } from '../util-methods';
 
@@ -7,7 +7,8 @@ import { UtilMethods } from '../util-methods';
   name: 'processValue',
 })
 export class ProcessValuePipe implements PipeTransform {
-  constructor(private decimalPipe: DecimalPipe) {}
+  private decimalPipe = inject(DecimalPipe);
+
 
   transform(processValue: undefined |
     (Pick<ProcessValue, 'value' | 'value_type' | 'value_unit'> | ProcessValueCommandChoiceValue | ProcessValueCommandFreeTextValue | ProcessValueCommandNumberValue)

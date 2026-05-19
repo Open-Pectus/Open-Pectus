@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { MswEnablement } from '../msw/msw-enablement';
 import { FrontendPubsubService } from './api';
 
@@ -18,9 +18,9 @@ import { FrontendPubsubService } from './api';
   `,
 })
 export class MswEnablementComponent implements OnInit {
-  protected readonly MswEnablement = MswEnablement;
+  private pubSubService = inject(FrontendPubsubService);
 
-  constructor(private pubSubService: FrontendPubsubService) {}
+  protected readonly MswEnablement = MswEnablement;
 
   ngOnInit() {
     if(MswEnablement.isEnabled) {

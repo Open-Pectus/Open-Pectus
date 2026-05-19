@@ -5,11 +5,12 @@ import {dirname, resolve} from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// paths now based on node_modules/monaco-languageclient/src/worker/index.ts
 export default {
   entry: {
-    editor: './node_modules/@codingame/monaco-vscode-editor-api/esm/vs/editor/editor.worker.js',
-    textmate: './node_modules/@codingame/monaco-vscode-textmate-service-override/worker.js',
-    editorService: './node_modules/@codingame/monaco-vscode-api/vscode/src/vs/editor/common/services/editorSimpleWorker.js',
+    textmate: './node_modules/@codingame/monaco-vscode-textmate-service-override/worker',
+    editorService: './node_modules/@codingame/monaco-vscode-editor-api/esm/vs/editor/editor.worker.js',
+    // extensionHost: './node_modules/@codingame/monaco-vscode-api/workers/extensionHost.worker'
   },
   output: {
     filename: '[name].js',

@@ -65,6 +65,18 @@ class TestLabjackHardware(unittest.TestCase):
         with hwl:
             hwl.write_batch(values_to_write, list(registers.values()))
 
+    def test_can_handle_zero_length_batch_read_and_write(self):
+        registers = {f"Writable {i:02d}": Register(f"{i:02d}",
+                     RegisterDirection.Both,
+                     port=f"USER_RAM{i}_U16") for i in range(8)}
+
+        hwl = Labjack_Hardware(serial_number=SN)
+        hwl._registers = registers
+        hwl.validate_offline()
+        with hwl:
+            hwl.read_batch([])
+            hwl.write_batch([], [])
+
 
 if __name__ == "__main__":
     unittest.main()

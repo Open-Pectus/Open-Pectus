@@ -7,7 +7,7 @@ from typing import Literal
 
 import openpectus.aggregator.models as Mdl
 import webpush
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, computed_field
 from pydantic.json_schema import SkipJsonSchema
 
 SystemStateEnum = Mdl.SystemStateEnum
@@ -215,6 +215,7 @@ class ProcessValue(Dto):
     commands: list[ProcessValueCommand] | SkipJsonSchema[None] = None
     direction: Mdl.TagDirection
     simulated: bool | SkipJsonSchema[None] = None
+    plot_only: bool | SkipJsonSchema[None] = None
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(name="{self.name}", value="{self.value}", ' +
@@ -482,6 +483,7 @@ class RecentRun(Dto):
     run_id: str
     started_date: datetime
     completed_date: datetime
+    uod_name: str
     uod_filename: str
     uod_author_name: str
     uod_author_email: str
@@ -491,6 +493,11 @@ class RecentRun(Dto):
     aggregator_computer_name: str
     aggregator_version: str
     contributors: list[Contributor] = []
+
+    @computed_field
+    @property
+    def engine_name(self) -> str:
+        return f"{self.engine_computer_name} ({self.uod_name})"
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(engine_id="{self.engine_id}", run_id="{self.run_id}")'

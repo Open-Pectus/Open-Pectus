@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
@@ -12,6 +12,12 @@ import { MethodEditorSelectors } from './method-editor.selectors';
 // noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class MethodEditorEffects {
+  private actions = inject(Actions);
+  private store = inject(Store);
+  private processUnitService = inject(ProcessUnitService);
+  private recentRunsService = inject(RecentRunsService);
+  private pubSubService = inject(PubSubService);
+
   saveMethodEditorModel = createEffect(() => this.actions.pipe(
     ofType(MethodEditorActions.saveButtonClicked, MethodEditorActions.saveKeyboardShortcutPressed),
     concatLatestFrom(() => [
@@ -89,9 +95,4 @@ export class MethodEditorEffects {
       );
     }),
   ));
-
-  constructor(private actions: Actions, private store: Store,
-              private processUnitService: ProcessUnitService,
-              private recentRunsService: RecentRunsService,
-              private pubSubService: PubSubService) {}
 }

@@ -4,21 +4,21 @@ import {
   Component,
   DestroyRef,
   ElementRef,
-  EventEmitter,
+  inject,
   Injector,
   input,
-  Output,
+  output,
   runInInjectionContext,
-  ViewChild,
+  viewChild
 } from '@angular/core';
 // import '@codingame/monaco-vscode-json-default-extension';
-import '@codingame/monaco-vscode-theme-defaults-default-extension';
+// import '@codingame/monaco-vscode-theme-defaults-default-extension';
 import { editor as MonacoEditor, Range } from '@codingame/monaco-vscode-editor-api';
-import { MonacoEditorLanguageClientWrapper } from 'monaco-editor-wrapper';
 import { ToastrService } from 'ngx-toastr';
 import { Observable } from 'rxjs';
 import { MonacoEditorBehaviours } from './monaco-editor-behaviours';
-import { MonacoWrapperConfig } from './monaco-wrapper-config';
+import { MonacoWrapper } from './monaco-wrapper';
+import { EditorApp } from 'monaco-languageclient/editorApp';
 
 
 @Component({
@@ -31,25 +31,27 @@ import { MonacoWrapperConfig } from './monaco-wrapper-config';
 })
 export class MonacoEditorComponent implements AfterViewInit {
   editorSizeChange = input.required<Observable<void>>();
+  fileUriPrefix = input.required<string>();
   unitId = input<string>();
   editorContent = input<string>();
   editorOptions = input<MonacoEditor.IEditorOptions & MonacoEditor.IGlobalEditorOptions>({});
   dropFileEnabled = input<boolean>(false);
   dropFileDisabledReason = input<string>();
-  @Output() editorContentChanged = new EventEmitter<string[]>();
-  @Output() editorIsReady = new EventEmitter<MonacoEditor.IStandaloneCodeEditor>();
-  @ViewChild('editor', {static: true}) editorElement!: ElementRef<HTMLDivElement>;
-  private wrapper = new MonacoEditorLanguageClientWrapper();
-
-  constructor(private injector: Injector, private destroyRef: DestroyRef, private toastr: ToastrService) {}
+  readonly editorContentChanged = output<string[]>();
+  readonly editorIsReady = output<MonacoEditor.IStandaloneCodeEditor>();
+  readonly editorElement = viewChild.required<ElementRef<HTMLDivElement>>('editor');
+  private editorApp?: EditorApp;
+  private injector = inject(Injector);
+  private destroyRef = inject(DestroyRef);
+  private toastr = inject(ToastrService);
 
   async ngAfterViewInit() {
     await this.initAndStartWrapper();
-    // if a collapsible element with a monaco editor starts collapsed, the above will run, but we won't have an editor afterwards
-    if(this.wrapper.getEditor() === undefined) return;
+    // if a collapsible element with a monaco editor starts collapsed, the above will run, but we won't have an editor afterward
+    const editor = this.editorApp?.getEditor();
+    if(editor === undefined) return;
     runInInjectionContext(this.injector, this.setupEditorBehaviours.bind(this));
-    this.editorIsReady.emit(this.wrapper.getEditor());
-    void this.startLanguageClient();
+    this.editorIsReady.emit(editor);
   }
 
   onDragOver(event: DragEvent) {
@@ -93,18 +95,11 @@ export class MonacoEditorComponent implements AfterViewInit {
 
     // using pushEditOperations to get undo functionality, which doesn't work with setValue or applyEdits
     const editOperation = {range: new Range(0, 0, Number.MAX_VALUE, Number.MAX_VALUE), text};
-    this.wrapper.getEditor()?.getModel()?.pushEditOperations(null, [editOperation], () => null);
-  }
-
-  private async startLanguageClient() {
-    if(this.unitId() !== undefined) {
-      this.wrapper.initLanguageClients();
-      await this.wrapper.startLanguageClients();
-    }
+    this.editorApp?.getEditor()?.getModel()?.pushEditOperations(null, [editOperation], () => null);
   }
 
   private setupEditorBehaviours() {
-    const editor = this.wrapper.getEditor();
+    const editor = this.editorApp?.getEditor();
     if(editor === undefined) throw Error('Monaco Editor Wrapper returned no editor!');
     editor.updateOptions(this.editorOptions());
     new MonacoEditorBehaviours(this.destroyRef, editor, this.editorSizeChange(), this.editorContent, this.onEditorContentChanged.bind(this));
@@ -115,11 +110,17 @@ export class MonacoEditorComponent implements AfterViewInit {
   }
 
   private async initAndStartWrapper() {
-    const wrapperConfig = MonacoWrapperConfig.buildWrapperConfig(this.editorElement.nativeElement, this.unitId());
-    await this.wrapper.initAndStart(wrapperConfig);
+    const languageId = 'pcode';
+    await MonacoWrapper.buildVsCodeApi(languageId, this.unitId());
+    await MonacoWrapper.buildLanguageClient(languageId, this.unitId());
+
+    this.editorApp = MonacoWrapper.buildEditorApp(this.fileUriPrefix());
+    const htmlContainer = this.editorElement().nativeElement;
+    await this.editorApp.start(htmlContainer);
+
     this.destroyRef.onDestroy(() => {
-      this.wrapper.dispose();
-      MonacoWrapperConfig.isInitialized = false;
+      this.editorApp?.dispose();
+      MonacoWrapper.isInitialized = false;
     });
   }
 

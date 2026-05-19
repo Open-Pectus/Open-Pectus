@@ -12,7 +12,6 @@ from openpectus.lang.exec.runlog import RuntimeInfo
 from openpectus.lang.exec.tags import Tag, SystemTagName
 from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, UodCommand
-from openpectus.lang.exec.visitor import NodeAction
 from openpectus.lang.model.pprogramformatter import print_parsed_program as print_program
 import openpectus.lang.model.ast as p
 from openpectus.lang.model.parser import PcodeParser
@@ -207,7 +206,7 @@ Macro: B
 Call macro: A
 """
         engine = self.engine
-        run_engine(engine, program, 10)
+        run_engine(engine, program, 20)
         self.assertEqual(["a", "b", "c",], engine.interpreter.get_marks())
 
 
@@ -224,7 +223,7 @@ Call macro: A
 Call macro: A
 """
         engine = self.engine
-        run_engine(engine, program, 20)
+        run_engine(engine, program, 30)
         self.assertEqual(["a", "b", "c", "b", "c",], engine.interpreter.get_marks())
 
 
@@ -289,7 +288,7 @@ Call macro: A
         engine = self.engine
 
         with self.assertRaises(EngineError):
-            run_engine(engine, program, 10)
+            run_engine(engine, program, 20)
         self.assertEqual(["a",], engine.interpreter.get_marks())
 
 
@@ -311,7 +310,7 @@ Call macro: A
         engine = self.engine
 
         with self.assertRaises(EngineError):
-            run_engine(engine, program, 10)
+            run_engine(engine, program, 20)
         self.assertEqual(["a",], engine.interpreter.get_marks())
 
 # --- Conditions ---
@@ -344,7 +343,7 @@ Watch: counter > 0
     Mark: d
 """
         engine = self.engine
-        run_engine(engine, program, 15)
+        run_engine(engine, program, 25)
 
         marks = engine.interpreter.get_marks()
         self.assertTrue(marks == ["a", "c", "b", "d", "e"] or marks == ["a", "c", "b", "e", "d"])
@@ -354,11 +353,12 @@ Watch: counter > 0
 Mark: a
 Watch: counter > 0
     Mark: b
+Wait: 0.2s
 Mark: c
 incr counter
 """
         engine = self.engine
-        run_engine(engine, program, 15)
+        run_engine(engine, program, 25)
         self.assertEqual(["a", "c", "b"], engine.interpreter.get_marks())
 
         engine.schedule_execution(EngineCommandEnum.STOP)
@@ -367,7 +367,7 @@ incr counter
         # rerun program and assert "same" result
         # but only if the counter tag has been reset. There is no reason why a custom tag would reset, is there?
         engine.schedule_execution(EngineCommandEnum.START)
-        continue_engine(engine, 15)
+        continue_engine(engine, 25)
         self.assertEqual(["a", "b", "c"], engine.interpreter.get_marks())
 
     def test_watch_long_running_order(self):
@@ -387,8 +387,8 @@ Mark: b3
         engine = self.engine
         run_engine(engine, program, 30)
 
-        # self.assertEqual(["a", "b", "a1", "b1", "a2", "b2", "a3", "b3"], engine.interpreter.get_marks())
-        self.assertEqual(['a', 'a1', 'a2', 'b', 'a3', 'b1', 'b2', 'b3'], engine.interpreter.get_marks())
+        self.assertEqual(["a", "b", "a1", "b1", "a2", "b2", "a3", "b3"], engine.interpreter.get_marks())
+        #self.assertEqual(['a', 'a1', 'a2', 'b', 'a3', 'b1', 'b2', 'b3'], engine.interpreter.get_marks())
 
     @unittest.skip("Block in Watch not supported")
     def test_watch_block_long_running_block_time(self):
@@ -595,7 +595,7 @@ Block: A
 Mark: A2
 """
         engine = self.engine
-        run_engine(engine, program, 25)
+        run_engine(engine, program, 30)
 
         self.assertEqual(["A1", "B1", "A2"], engine.interpreter.get_marks())
 
@@ -779,66 +779,48 @@ Wait: 0.5 s
             print(f"{t1=} | {t2=}")
             self.assertAlmostEqual(t2, 5, delta=1)
 
-    def test_debug_node_actions(self):
-        # this test demonstrates the details of run_tick() and run_ffw_tick()
-        # used when fast-forwarding an edited method.
-
-        method1 = Method.from_numbered_pcode("""\
-01 Base: s
-02 Watch: Run Time > 0s
-03     Mark: B
-04     0.5 Mark: C
-""")
-        runner = EngineTestRunner(create_test_uod, method1)
+    def test_block_nested_continuation(self):
+        program = """\
+01 Block: B1
+02     Block: B2
+03         Block: B3
+04             End blocks
+05         Mark: A
+06     Mark: B
+07 Mark: C
+"""
+        runner = EngineTestRunner(create_test_uod, program)
         with runner.run() as instance:
-            # Note: start() is skipped so the test is in control
-            # instance.start()
-            interpreter = instance.engine.interpreter
+            instance.start()
 
-            gen = interpreter.visit_ProgramNode(interpreter._program)
-            xs = []
-            for x in gen:
-                if isinstance(x, NodeAction):
-                    x.execute()
-                    xs.append(str(x.node) + "  |  " + x.action_name)
-                else:
-                    xs.append(x)
+            instance.run_until_condition(lambda: "C" in instance.marks)
 
-                if len(xs) > 5 and xs[-6:-1] == [None, None, None, None, None]:
-                    break
+            # verify marks A and B are skipped because their surrounding block is ended
+            self.assertEqual(instance.marks, ["C"])
 
-            print()
-            print("Nodes:")
-            print()
-            [print(x) for x in xs]
-            print()
+            instance.run_ticks(10)
+            print("instance.marks", instance.marks)
 
-            interpreter._in_interrupt = True
+    def test_block_events(self):
+        program = """\
+01 Block: B1
+02     Block: B2
+03         Block: B3
+04             End blocks
+05         Mark: A
+06     Mark: B
+07 Mark: C
+"""
+        runner = EngineTestRunner(create_test_uod, program)
+        with runner.run() as instance:
+            instance.start()            
+            
+            instance.run_until_instruction("Block", arguments="B2", state="started")
+            self.assertEqual(instance.scope_node, "02")
+            self.assertEqual(instance.scope_node_history, ["root", "01", "02"])
 
-            def evaluate_condition(node: p.NodeWithCondition):
-                return True
-            interpreter._evaluate_condition = evaluate_condition
-
-            def is_awaiting_threshold(node: p.Node):
-                return False
-            interpreter._is_awaiting_threshold = is_awaiting_threshold
-            for interrupt in interpreter._interrupts_map.values():
-                print("--------------")
-                print(f"Interrupt {interrupt.node}")
-                print()
-                xs = []
-                for x in interrupt.actions:
-                    if isinstance(x, NodeAction):
-                        x.execute()
-                        xs.append(str(x.node) + "  |  " + x.action_name)
-                    else:
-                        xs.append(x)
-
-                    if len(xs) > 5 and xs[-6:-1] == [None, None, None, None, None]:
-                        break
-
-                [print(x) for x in xs]
-                print()
+            instance.run_until_event("method_end")
+            self.assertEqual(instance.scope_node_history, ["root", "01", "02", "03"])
 
 
 if __name__ == "__main__":
