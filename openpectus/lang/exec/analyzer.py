@@ -130,14 +130,14 @@ class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
                 if isinstance(child, (p.EndBlockNode, p.EndBlocksNode)):
                     has_end = True
                     continue
-                if has_end and not isinstance(child, p.BlankNode):
+                if has_end and not isinstance(child, (p.BlankNode, p.CommentNode)):
                     self.add_item(self.create_item(child))
         yield from super().visit_BlockNode(node)
 
     def visit_EngineCommandNode(self, node: p.EngineCommandNode):
         super().visit_EngineCommandNode(node)
         if not self.method_end and node.instruction_name in ["Stop", "Restart"]:
-            if not any(isinstance(parent, p.NodeWithCondition) for parent in node.parents):
+            if not isinstance(node.parent, (p.NodeWithTagOperatorValue, p.BlockNode)):
                 self.method_end = node
         yield
 
