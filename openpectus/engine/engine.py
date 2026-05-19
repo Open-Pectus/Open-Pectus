@@ -446,7 +446,7 @@ class Engine(InterpreterContext):
         register_values = []
         registers = [r for r in hwl.registers.values() if RegisterDirection.Write in r.direction]
         for r in registers:
-            tag_value = self.uod.tags[r.name].get_value()
+            tag_value = self._tags[r.name].get_value()
             register_value = tag_value if "from_tag" not in r.options \
                 else r.options["from_tag"](tag_value)
             register_values.append(register_value)
