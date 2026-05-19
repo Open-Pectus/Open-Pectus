@@ -6,6 +6,7 @@ from typing import Any
 
 from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum
 from openpectus.lang.exec.errors import EngineError
+from openpectus.lang.exec.events import EventListener
 from openpectus.lang.exec.regex import RegexNumber
 from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
 from openpectus.engine.hardware import RegisterDirection
@@ -278,7 +279,6 @@ Wait: 1s
 
             t1 = instance.run_until_instruction("Block", state="started", arguments="A")
             t1_time = t1/10
-            #instance.logger.info(f"Block: {block.get_value()} | Block time: {block_time.as_float():.2f}")
             self.assertEqual("A", block.get_value())
             self.assertAlmostEqual(0, block_time.as_number(), delta=delta)
 
@@ -294,7 +294,7 @@ Wait: 1s
 
             self.assertEqual("A", block.get_value())
             self.assertAlmostEqual(t2_time + t3_time, block_time.as_number(), delta=delta)
-            
+
             instance.index_step_back(5)  # search even further back to Block: A
             t4 = instance.run_until_instruction("Block", state="completed", arguments="A")
             t4_time = t4/10
@@ -433,6 +433,41 @@ Mark: A
             self.assertAlmostEqual(block_time.as_number(),
                                    t1_time - 1.0 + t3_time - 2.0 + t4_time,
                                    delta=delta)
+
+    def test_tag_values_set_in_on_stop_are_writen_to_process_image_before_engine_stops(self):
+        hw = TestHW(connected=True)
+        uod = (
+            UodBuilder()
+            .with_instrument("TestUod")
+            .with_author("Test Author", "test@openpectus.org")
+            .with_filename(__file__)
+            .with_hardware(hw)
+            .with_location("Test location")
+            .with_hardware_register("Foo", RegisterDirection.Write)
+            .with_tag(Tag("Foo", value="", unit=None, direction=TagDirection.Output))
+        ).build()
+
+        runner = EngineTestRunner(uod, "Stop")
+        with runner.run() as instance:
+            foo = instance.engine.tags["Foo"]
+            foo.set_value("initial value", 0)
+
+            listener = EventListener()
+            instance.add_event_listener(listener)
+
+            def on_stop():
+                foo.set_value("stop value", 10)
+                print("test on_stop")
+
+            setattr(listener, "on_stop", on_stop)
+
+            instance.start_run()
+            self.assertEqual(foo.get_value(), "initial value")
+
+            instance.run_until_event("stop")
+            self.assertEqual(foo.get_value(), "stop value")
+
+            self.assertEqual(hw.register_values["Foo"], "stop value")
 
     def test_tag_unit_conversion_handled_by_pint(self):
         program = """\
@@ -850,8 +885,6 @@ Base: CV
 
 
     def test_accumulated_column_block_volume(self):
-        # TODO flaky - still??        
-
         uod = (UodBuilder()
                .with_instrument("TestUod")
                .with_author("Test Author", "test@openpectus.org")
