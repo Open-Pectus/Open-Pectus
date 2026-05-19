@@ -56,10 +56,13 @@
             },
             "allowedCommonJsDependencies": [
               "vscode-jsonrpc",
-              "vscode-languageclient",
-              "vscode-oniguruma",
-              "vscode-textmate",
               "@vscode/iconv-lite-umd",
+              "!../../../../../../../../../style-loader/dist/runtime/styleTagTransform.js",
+              "!../../../../../../../../../style-loader/dist/runtime/injectStylesIntoStyleTag.js",
+              "!../../../../../../../../../style-loader/dist/runtime/insertBySelector.js",
+              "!../../../../../../../../../style-loader/dist/runtime/insertStyleElement.js",
+              "!../../../../../../../../../style-loader/dist/runtime/setAttributesWithoutAttributes.js",
+              "!../../../../../../../../../style-loader/dist/runtime/styleDomAPI.js",
               "!../../../../../../../../style-loader/dist/runtime/styleTagTransform.js",
               "!../../../../../../../../style-loader/dist/runtime/injectStylesIntoStyleTag.js",
               "!../../../../../../../../style-loader/dist/runtime/insertBySelector.js",
@@ -72,21 +75,13 @@
               "src/favicon.ico",
               "src/assets",
               "src/manifest.webmanifest",
-              {
-                "glob": "codicon.ttf",
-                "input": "./node_modules/monaco-editor/esm/vs/base/browser/ui/codicons/codicon",
-                "output": ""
-              },
               "src/mockServiceWorker.js"
             ],
             "styles": [
               "src/styles.scss",
-              "node_modules/@vscode/codicons/dist/codicon.css",
               "node_modules/ngx-toastr/toastr.css"
             ],
-            "scripts": [],
-            "serviceWorker": true,
-            "ngswConfigPath": "ngsw-config.json"
+            "scripts": []
           },
           "configurations": {
             "production": {
@@ -103,12 +98,12 @@
                 }
               ],
               "outputHashing": "all",
-              "extractLicenses": false
+              "extractLicenses": false,
+              "serviceWorker": true,
+              "ngswConfigPath": "ngsw-config.json"
             },
             "development": {
-              "buildOptimizer": false,
               "optimization": false,
-              "vendorChunk": true,
               "extractLicenses": false,
               "sourceMap": true,
               "namedChunks": true
@@ -131,12 +126,6 @@
             "proxyConfig": "src/proxy.conf.json"
           }
         },
-        "extract-i18n": {
-          "builder": "@angular-builders/custom-webpack:extract-i18n",
-          "options": {
-            "buildTarget": "frontend:build"
-          }
-        },
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
@@ -154,5 +143,31 @@
     "schematicCollections": [
       "@angular-eslint/schematics"
     ]
+  },
+  "schematics": {
+    "@schematics/angular:component": {
+      "type": "component"
+    },
+    "@schematics/angular:directive": {
+      "type": "directive"
+    },
+    "@schematics/angular:service": {
+      "type": "service"
+    },
+    "@schematics/angular:guard": {
+      "typeSeparator": "."
+    },
+    "@schematics/angular:interceptor": {
+      "typeSeparator": "."
+    },
+    "@schematics/angular:module": {
+      "typeSeparator": "."
+    },
+    "@schematics/angular:pipe": {
+      "typeSeparator": "."
+    },
+    "@schematics/angular:resolver": {
+      "typeSeparator": "."
+    }
   }
 }

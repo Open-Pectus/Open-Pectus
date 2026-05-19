@@ -1,6 +1,4 @@
-import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
-import { PushPipe } from '@ngrx/component';
+import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { ProcessValueCommand } from '../../api';
 import { CollapsibleElementComponent } from '../../shared/collapsible-element.component';
@@ -18,38 +16,39 @@ import { ProcessValuesCategorizedComponent } from './process-values-categorized.
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CollapsibleElementComponent,
-    NgIf,
     ProcessValueCommandsComponent,
-    PushPipe,
     ToggleButtonComponent,
-    ProcessValuesCategorizedComponent,
+    ProcessValuesCategorizedComponent
   ],
   template: `
     <app-collapsible-element [name]="'Process Values'" (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-dashboard'">
-      <app-toggle-button [label]="'All Process Values'" buttons [checked]="allProcessValues | ngrxPush"
-                         (changed)="onToggleAllProcessValues($event)"></app-toggle-button>
+      <app-toggle-button [label]="'All Process Values'" buttons [checked]="allProcessValues()"
+                         (changed)="onToggleAllProcessValues($event)" />
 
-      <div class="py-2 px-1 lg:px-2" content *ngIf="!collapsed">
-        <app-process-values-categorized [processValues]="processValues | ngrxPush"
-                                        (openCommands)="onOpenCommands($event)"></app-process-values-categorized>
-      </div>
+      @if (!collapsed) {
+        <div class="py-2 px-1 lg:px-2" content>
+          <app-process-values-categorized [processValues]="processValues()"
+                                          (openCommands)="onOpenCommands($event)" />
+        </div>
+      }
 
-      <app-process-value-commands *ngIf="showCommands" popover class="absolute p-0 block overflow-visible"
-                                  [processValueCommands]="pvAndPositionForPopover?.processValue?.commands"
-                                  (shouldClose)="onCloseCommands($event)"
-                                  [style.left.px]="pvAndPositionForPopover?.position?.x"
-                                  [style.top.px]="pvAndPositionForPopover?.position?.y"></app-process-value-commands>
+      @if (showCommands) {
+        <app-process-value-commands popover class="absolute p-0 block overflow-visible"
+                                    [processValueCommands]="pvAndPositionForPopover?.processValue?.commands"
+                                    (shouldClose)="onCloseCommands($event)"
+                                    [style.left.px]="pvAndPositionForPopover?.position?.x"
+                                    [style.top.px]="pvAndPositionForPopover?.position?.y" />
+      }
     </app-collapsible-element>
   `,
 })
 export class ProcessValuesComponent implements OnInit, OnDestroy {
-  allProcessValues = this.store.select(DetailsSelectors.allProcessValues);
-  processValues = this.store.select(DetailsSelectors.processValues);
   protected showCommands = false;
   protected pvAndPositionForPopover?: PvAndPosition;
   protected collapsed = false;
-
-  constructor(private store: Store) {}
+  private store = inject(Store);
+  allProcessValues = this.store.selectSignal(DetailsSelectors.allProcessValues);
+  processValues = this.store.selectSignal(DetailsSelectors.processValues);
 
   ngOnInit() {
     this.store.dispatch(ProcessValuesActions.processValuesComponentInitialized());

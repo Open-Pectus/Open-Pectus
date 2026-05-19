@@ -234,7 +234,7 @@ def run_example_commands(uod: UnitOperationDefinitionBase):
     def run_example_with_description(description: str, example: str) -> list[str]:
         failed_cmds: list[str] = []
         try:
-            runner = EngineTestRunner(uod_factory=lambda: copy.deepcopy(uod), method=example)
+            runner = EngineTestRunner(uod_argument=copy.deepcopy(uod), method=example)
             with runner.run() as instance:
                 instance.start()
                 # wait up to 1 minute, that ought to be enought for everybody

@@ -2,6 +2,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 import logging
 from logging import LogRecord, Handler
+import random
 import time
 from typing import Callable, Generator, Literal
 
@@ -10,9 +11,11 @@ from openpectus.engine.models import EngineCommandEnum
 from openpectus.lang.exec.clock import WallClock
 from openpectus.lang.exec.errors import EngineError
 from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
-from openpectus.lang.exec.events import BlockInfo, EventListener
+from openpectus.lang.exec.events import BlockInfo, EventListener, ScopeInfo
 from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
+from openpectus.lang.exec.pinterpreter import PInterpreter
+from openpectus.lang.exec.interpreter_models import SePath
 import openpectus.protocol.models as Mdl
 from openpectus.engine.engine import Engine, EngineTiming
 import openpectus.lang.model.ast as p
@@ -35,13 +38,14 @@ def _handle_engine_error(engine: Engine):
 
 
 UodFactory = Callable[[], UnitOperationDefinitionBase]
+UodInstanceOrFactory = UnitOperationDefinitionBase | UodFactory
 
 RunCondition = Callable[[], bool]
 
 EventName = Literal[
     "start", "stop", "block_start", "block_end",
     "restart", "pause", "hold",
-    "method_end"
+    "method_end", "method_edited"
 ]
 """ Defines the awaitable events of the test engine runner """
 
@@ -52,7 +56,7 @@ InstructionName = Literal[
     "Stop", "Restart",
     "Info", "Warning", "Error",
     "Macro", "Call macro",
-    "Increment run counter",
+    "Increment run counter", "Base",
     "Noop", "Notify",
     "Simulate", "Simulate off"
 ]
@@ -67,9 +71,16 @@ FindInstructionState = Literal[
 
 class EngineTestRunner:
     """ Expose an interface of Engine similar to what is available in the frontend to tests. """
-    def __init__(self, uod_factory: UodFactory, method: str | Mdl.Method = "", interval: float = 0.1, speed: float = 1.0,
-                 fail_on_log_error=True, raise_on_emit=False) -> None:
-        self.uod_factory = uod_factory
+    def __init__(self, uod_argument: UodInstanceOrFactory, method: str | Mdl.Method = "", interval: float = 0.1, speed: float = 1.0,
+                 fail_on_log_error=True,
+                 raise_on_emit=False
+        ) -> None:
+        """ Create an engine test runner instance.
+
+        Args:
+            method: Method to run. The format should be either raw pcode, numbered pcode or pre-parsed
+        """
+        self.uod_factory = (lambda: uod_argument) if isinstance(uod_argument, UnitOperationDefinitionBase) else uod_argument
         self.method: str | Mdl.Method = method
         self.interval = interval
         self.speed = speed
@@ -103,20 +114,47 @@ class EngineTestInstance(EventListener):
         self.engine = engine
         self.timing = timing
 
+        # The time increment value to use for the first iteration of run_until_*() methods where the previous tick time is not defined.
+        # Using interval makes timing more natural than when using a value of 0.
+        #
+        # The concept at play is that tags and other event consumers use the 'increment_time' argument of the on_tick event to
+        # determine time passed. This allows pausing time in various ways, eg. the Pause instruction or timers going in and out of
+        # scope. Whenever the run is continued, the first tick must use a 'last value' to calculate increment_time and this value
+        # must be constructed to avoid including the pause duration in increment_time (which would cause a large and incorrect spike
+        # in the time perceived by the tag).
+        #
+        # In the production code, this is different because increment_time is zero on first tick and then never again and tags handle
+        # 'pause' to determine when to increment their timers. But in tests there is an implicit pause whenever a run_until_* method
+        # ends so the next run_until_* method must use a proper value for increment_time.
+        self._initial_increment = self.timing.interval
+
         self.engine.run(skip_timer_start=True)
         if isinstance(method, str):
-            method = Mdl.Method.from_pcode(method)
+            if Mdl.Method.is_probably_numbered_pcode(method):
+                method = Mdl.Method.from_numbered_pcode(method)
+            else:
+                method = Mdl.Method.from_pcode(method)
+
         self.engine.set_method(method)
 
         self._search_index = 0
         # register as listener for lifetime events, so these events can be awaited in the tests
         self.engine.emitter.add_listener(self)
         self._last_event: EventName | None = None
+        self._scopes: list[ScopeInfo] = []
+        self._scope_history: list[ScopeInfo] = []
 
     def start(self):
         """ Schedules the Start command. run_* is required to actually run it """
         self.engine.schedule_execution(EngineCommandEnum.START)
         self.timing.timer.start()
+
+    def start_run(self):
+        """ Start a run making the runner ready for normal operation. """
+        assert self.engine._tick_number == -1
+        self.start()
+        self.run_ticks(1)
+        assert self.engine._tick_number == 0
 
     @property
     def marks(self) -> list[str]:
@@ -130,6 +168,61 @@ class EngineTestInstance(EventListener):
     def runtimeinfo(self) -> RuntimeInfo:
         return self.engine.interpreter.runtimeinfo
 
+    @property
+    def scope_node(self) -> str | None:
+        if len(self._scopes) > 0:
+            return self._scopes[-1].node_id
+        return None
+
+    @property
+    def scope_node_history(self) -> list[str]:
+        return list([scope.node_id for scope in self._scope_history])
+
+    def run_ticks(self, ticks: int, verbose=True, fail_on_log_error=True) -> int:
+        """ Continue program execution for the specified number of ticks. """
+
+        if verbose:
+            logger.info(f"Start waiting for {ticks} ticks")
+
+        error_log_handler = TestLogHandler(enabled=fail_on_log_error)
+
+        tick_index = 0
+        last_tick_time_mon = 0.0
+        increment = self._initial_increment
+        interval = self.timing.interval
+
+        while tick_index < ticks:
+            tick_time = time.time()
+            tick_time_mon = time.monotonic()
+            if tick_index > 0:
+                increment = tick_time_mon - last_tick_time_mon
+
+            # execute tick, with increment==0 on first iteration
+            self.engine.tick(tick_time, increment)
+
+            # # wait random time 1-10 times a tenth of a tick to stress test duration calculation
+            #secs = random.randint(0, 10) * 0.1 * 0.1
+            #logger.info(f"Sleeping {secs}")
+            #time.sleep(secs)
+
+            self._handle_error(error_log_handler)
+
+            last_tick_time_mon = tick_time_mon
+            tick_time_mon = time.monotonic()
+            elapsed = tick_time_mon - last_tick_time_mon
+            deadline = interval - elapsed
+            if deadline > 0.001:
+                time.sleep(deadline)
+            elif deadline < 0:
+                logger.warning(f"Sleep deadline for tick was negative: {deadline}")
+
+            tick_index += 1
+
+        if verbose:
+            logger.info(f"Done waiting for {ticks} ticks")
+        return tick_index
+
+
     def run_until_condition(self, condition: RunCondition, max_ticks=30, fail_on_log_error=True) -> int:
         """ Continue program until condition occurs. Return the number of ticks spent.
 
@@ -139,42 +232,48 @@ class EngineTestInstance(EventListener):
             return 0
 
         error_log_handler = TestLogHandler(enabled=fail_on_log_error)
-        ticks = 0
-        max_ticks_scaled = max_ticks * self.timing.speed
-        last_tick_time = 0.0
 
-        while not condition():
+        tick_index = 0
+        last_tick_time_mon = 0.0
+        increment = self._initial_increment
+        interval = self.timing.interval
+
+        while True:
             tick_time = time.time()
+            tick_time_mon = time.monotonic()
+            if tick_index > 0:
+                increment = tick_time_mon - last_tick_time_mon
 
-            ticks += 1
-            if ticks > max_ticks_scaled:
-                if max_ticks == max_ticks_scaled:
-                    raise TimeoutError(f"Condition did not occur within {max_ticks} ticks")
-                else:
-                    raise TimeoutError(
-                        f"Condition did not occur within {max_ticks_scaled} ticks, " +
-                        "(scaled from {max_ticks} using speed {self.speed})"
-                    )
-            increment = self.timing.interval
-            if last_tick_time > 0.0:
-                increment = tick_time - last_tick_time
-                self.engine.tick(tick_time, increment)
+            if condition():
+                return tick_index
 
-            last_tick_time = tick_time
-            elapsed = time.time() - last_tick_time
-            deadline = self.timing.interval - elapsed
-            if deadline > 0.0:
-                while last_tick_time+self.timing.interval-time.time() > 0:
-                    time.sleep(min(last_tick_time+self.timing.interval-time.time(), 0.01))
-            else:
+            if tick_index >= max_ticks:
+                raise TimeoutError(f"Condition did not occur within {max_ticks} ticks")
+
+            # execute tick, with increment==0 on first iteration
+            self.engine.tick(tick_time, increment)
+
+            self._handle_error(error_log_handler)
+
+            last_tick_time_mon = tick_time_mon
+            tick_time_mon = time.monotonic()
+            elapsed = tick_time_mon - last_tick_time_mon
+            deadline = interval - elapsed
+            if deadline > 0.001:
+                time.sleep(deadline)
+                # If doing this again, must use last_tick_time_mon
+                # while last_tick_time + interval - time.time() > 0:
+                #     time.sleep(min(last_tick_time + interval - time.time(), 0.01))
+            elif deadline < 0:
                 logger.warning(f"Sleep deadline for tick was negative: {deadline}")
 
-            if self.engine.has_error_state():
-                _handle_engine_error(self.engine)
-            else:
-                error_log_handler.raise_if_errors_encountered()
+            tick_index += 1
 
-        return ticks
+    def _handle_error(self, test_log_handler: TestLogHandler):
+        if self.engine.has_error_state():
+            _handle_engine_error(self.engine)
+        else:
+            test_log_handler.raise_if_errors_encountered()
 
     def _convert_FindInstruction_state_to_enum(self, state: FindInstructionState) -> RuntimeRecordStateEnum | None:
         # convert the easy-to-use literal into one of the enum states that find_instruction needs
@@ -243,6 +342,7 @@ class EngineTestInstance(EventListener):
             ticks = self.run_until_condition(cond, max_ticks=max_ticks)
         except TimeoutError:
             logger.error(self.get_runtime_table("At TimeoutError"))
+            logger.error(f"Timeout while waiting for instruction '{instruction_name}', state: {state}, arguments: {arguments}")
             raise TimeoutError(
                 f"Timeout while waiting for instruction '{instruction_name}', state: {state}, arguments: {arguments}")
 
@@ -330,24 +430,22 @@ class EngineTestInstance(EventListener):
             print("Waiting for started event")
             self.run_ticks(1)
 
-    def run_ticks(self, ticks: int, verbose=True) -> None:
-        """ Continue program execution until te specified number of ticks. """
-
-        if verbose:
-            logger.info(f"Start waiting for {ticks} ticks")
-        max_ticks = ticks + 1
-        try:
-            _ = self.run_until_condition(lambda: False, max_ticks)
-        except TimeoutError:
-            if verbose:
-                logger.info(f"Done waiting for {ticks} ticks")
-            return
-
-        raise ValueError("Could not wait??")
-
     def get_runtime_table(self, description: str = "") -> str:
         """ Return a text view of the runtime table contents. """
         return self.runtimeinfo.get_as_table(description)
+
+    @property
+    def logger(self):
+        return logger
+
+    def print_runtime_table(self, description=""):
+        """ Print a text view of the runtime table contents. """
+        table = self.runtimeinfo.get_as_table(description)
+        print(table)
+
+    def print_runlog(self, description=""):
+        """ Print a text view of the runlog lines. """
+        print_runlog(self.engine, description)
 
     # --- EventListener impl ----
 
@@ -363,6 +461,25 @@ class EngineTestInstance(EventListener):
     def on_block_end(self, block_info: BlockInfo, new_block_info: BlockInfo | None):
         self._last_event = "block_end"
 
+    def on_scope_start(self, scope_info: ScopeInfo):
+        self._scopes.append(scope_info)
+        self._scope_history.append(scope_info)
+
+    # def on_scope_activate(self, scope_info: ScopeInfo):
+    #     pass
+
+    def on_scope_end(self, scope_info: ScopeInfo):
+        if len(self._scopes) == 0:
+            logger.error("Scope error. Event scope_end was raised when no scope were active")
+            return
+        scope = self._scopes[-1]
+        if scope.node_id != scope_info.node_id or scope.scope_type != scope_info.scope_type or scope.argument != scope_info.argument:
+            logger.error("Scope error. Event scope_end was raised when a different scope was active")
+            logger.error(f"Current scope: {scope}")
+            logger.error(f"Scope to end: {scope_info}")
+        else:
+            self._scopes.pop()
+
     def on_tick(self, tick_time: float, increment_time: float):
         pass
 
@@ -371,6 +488,10 @@ class EngineTestInstance(EventListener):
 
     def on_stop(self):
         self._last_event = "stop"
+
+    def on_method_edited(self, live_edit: bool):
+        self._last_event = "method_edited"
+        self._search_index = 0
 
     def on_engine_shutdown(self):
         pass
@@ -458,6 +579,48 @@ def continue_engine(engine: Engine, max_ticks: int = -1, fail_on_log_error=True)
             error_log_handler.raise_if_errors_encountered()
         ticks += 1
 
+def continue_engine_until(engine: Engine, condition: Callable[[], bool], max_ticks: int = -1, fail_on_log_error=True) -> int:
+    global last_tick_time, interval
+    print("Interpretation continuing until condition")
+    ticks = 1
+    error_log_handler = TestLogHandler(enabled=fail_on_log_error)
+
+    if condition():
+        return 0
+
+    while True:
+        tick_time = time.time()
+
+        if condition():
+            print(f"Stopping because condition was True")
+            return ticks
+
+        if ticks > max_ticks:
+            print(f"Stopping because max_ticks {max_ticks} was reached")
+            return ticks
+
+        increment = 0
+        if last_tick_time > 0.0:
+            increment = tick_time - last_tick_time
+
+        # execute tick even with 0 increment
+        engine.tick(tick_time, increment)
+
+        last_tick_time = tick_time
+        elapsed = time.time() - last_tick_time
+        deadline = interval - elapsed
+        if deadline > 0.0:
+            while last_tick_time+interval-time.time() > 0:
+                time.sleep(min(last_tick_time+interval-time.time(), 0.01))
+        else:
+            logger.warning(f"Sleep deadline for tick was negative: {deadline}")
+
+        if engine.has_error_state():
+            _handle_engine_error(engine)
+        else:
+            error_log_handler.raise_if_errors_encountered()
+        ticks += 1
+
 
 def print_runlog(e: Engine, description=""):
     runlog = e.interpreter.runtimeinfo.get_runlog()
@@ -506,13 +669,13 @@ def set_engine_debug_logging():
 
 
 def set_interpreter_debug_logging(include_events=False, include_runlog=False):
-    logger = logging.getLogger("openpectus.lang.exec.pinterpreter")
-    logger.setLevel(logging.DEBUG)
+    logging.getLogger(PInterpreter.__module__).setLevel(logging.DEBUG)
+    logging.getLogger(SePath.__module__).setLevel(logging.DEBUG)
 
     if include_runlog:
-        logging.getLogger("openpectus.lang.exec.runlog").setLevel(logging.DEBUG)
-    if include_events:
-        logging.getLogger("openpectus.lang.exec.events").setLevel(logging.DEBUG)
+        logging.getLogger(RuntimeInfo.__module__).setLevel(logging.DEBUG)
+    if include_events:        
+        logging.getLogger(EventListener.__module__).setLevel(logging.DEBUG)
         logging.getLogger("openpectus.lang.exec.tags_impl").setLevel(logging.DEBUG)
 
 
