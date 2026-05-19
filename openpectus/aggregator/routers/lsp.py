@@ -10,7 +10,6 @@ from openpectus.aggregator.aggregator import Aggregator
 from starlette.status import HTTP_404_NOT_FOUND
 
 logger = logging.getLogger(__name__)
-logging.getLogger("pylsp_jsonrpc.endpoint").setLevel(logging.ERROR) # Noisy library not contributing useful information
 router = APIRouter(tags=["lsp"], prefix="/lsp", include_in_schema=True)
 
 
