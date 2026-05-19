@@ -31,7 +31,7 @@ dependencies = [
     "PyJWT==2.10.1",
     "python-lsp-server==1.12.2",
     "multiprocess==0.70.18",
-    "Levenshtein==0.27.1",
+    "Levenshtein==0.27.3",
     "webpush==1.0.5"
 ]
 

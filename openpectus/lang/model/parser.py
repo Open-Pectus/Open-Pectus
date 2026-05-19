@@ -1,7 +1,9 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+import difflib
 import logging
 import re
+from typing import Any
 
 from openpectus.lang.model.ast import NodeIdGenerator, Position
 import openpectus.lang.model.ast as p
@@ -26,10 +28,8 @@ class ParserMethodLine:
 
 
 class ParserMethod:
-    empty: ParserMethod
-
-    def __init__(self, lines: list[ParserMethodLine]):
-        self.version = 0
+    def __init__(self, lines: list[ParserMethodLine], version=0):
+        self.version = version
         self.lines: list[ParserMethodLine] = lines
         # TODO add version and author - we should keep a version number so we can easily detect
         # multiple concurrent editors and bail out quick in that case
@@ -39,7 +39,7 @@ class ParserMethod:
         return f'{self.__class__.__name__}(lines={lines})'
 
     @staticmethod
-    def create_empty() -> ParserMethod:
+    def empty() -> ParserMethod:
         return ParserMethod(lines=[])
 
     def is_empty(self) -> bool:
@@ -47,7 +47,7 @@ class ParserMethod:
 
     @staticmethod
     def from_pcode(pcode: str) -> ParserMethod:
-        method = ParserMethod.create_empty()
+        method = ParserMethod.empty()
         line_num: int = 1
         for line in pcode.splitlines():
             method.lines.append(ParserMethodLine(id=f"id_{line_num}", content=line))
@@ -58,13 +58,43 @@ class ParserMethod:
         pcode = '\n'.join([line.content for line in self.lines])
         return pcode
 
-    def as_pcode_w_id(self) -> str:
+    def as_numbered_pcode(self) -> str:
         pcode = '\n'.join([line.id + ' ' + line.content for line in self.lines])
         return pcode
+    
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "version": self.version,
+            "lines": [asdict(line) for line in self.lines]
+        }
 
+    @staticmethod
+    def compare(a: ParserMethod, b: ParserMethod) -> list[str]:
+        """ Compare method a and b and return differences as string list. The list is empty if the methods match.
+        If the difference is simple, return a textual description, otherwise a list of unified diffs are returned. """
 
-ParserMethod.empty = ParserMethod.create_empty()
+        if (len(a.lines) != len(b.lines)):
+            # if the only difference is whole lines being added and remove, we describe this
+            diff_is_simple = True
+            for line_a in a.lines:
+                for line_b in b.lines:
+                    if line_a.id == line_b.id and line_a.content != line_b.content:
+                        diff_is_simple = False
+            if diff_is_simple:
+                ids_added = [line_b.id for line_b in b.lines if all([line_a.id != line_b.id for line_a in a.lines])]
+                ids_removed = [line_a.id for line_a in a.lines if all([line_a.id != line_b.id for line_b in b.lines])]
+                return [
+                    f'{len(ids_added)} lines added: ' + ", ".join(ids_added),
+                    f'{len(ids_removed)} lines removed: ' + ", ".join(ids_removed)
+                ]
+        a_text = a.as_numbered_pcode()
+        b_text = b.as_numbered_pcode()
 
+        result = difflib.unified_diff(a=a_text, b=b_text, n=2, lineterm="")
+        return list(result)
+
+    def clone(self) -> ParserMethod:
+        return ParserMethod(lines=[ParserMethodLine(line.id, line.content) for line in self.lines], version=self.version)
 
 class IncrementalIdGenerator(NodeIdGenerator):
     def __init__(self):
@@ -170,6 +200,7 @@ class PcodeParser:
 
     def parse_method(self, method: ParserMethod) -> p.ProgramNode:  # noqa C901
         program = p.ProgramNode(position=Position(0, 0)).with_id(self.id_generator)
+        program.version = method.version
 
         # first parse all lines individually in one fast pass, ignoring indentation and parent
         nodes: list[p.Node] = []
@@ -357,6 +388,8 @@ class PcodeParser:
             self._parse_tag_operator_value(node)
 
         node.parse_create_completed()
+        if node.instruction_name is None or node.instruction_name.strip() == "":
+            logger.error(f"instruction_name is empty for node type {type(node)}")
 
         return node
 

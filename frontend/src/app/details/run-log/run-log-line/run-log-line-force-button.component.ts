@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { RunLogActions } from '../ngrx/run-log.actions';
 import { RunLogLineButtonComponent } from './run-log-line-button.component';
@@ -12,17 +12,17 @@ import { RunLogLineButtonComponent } from './run-log-line-button.component';
                              colorClass="bg-yellow-100"
                              confirmColorClass="bg-yellow-700"
                              codiconClass="codicon-play"
-                             (confirmedClick)="onClick()">
-    </app-run-log-line-button>
+                             (confirmedClick)="onClick()" />
   `
 })
 export class RunLogLineForceButtonComponent {
-  @Input() lineId?: string;
+  private store = inject(Store);
 
-  constructor(private store: Store) {}
+  readonly lineId = input<string>();
 
   onClick() {
-    if(this.lineId === undefined) return;
-    this.store.dispatch(RunLogActions.forceLineButtonClicked({lineId: this.lineId}));
+    const lineId = this.lineId();
+    if(lineId === undefined) return;
+    this.store.dispatch(RunLogActions.forceLineButtonClicked({lineId: lineId}));
   }
 }

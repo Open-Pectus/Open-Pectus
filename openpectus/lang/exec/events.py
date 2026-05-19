@@ -103,6 +103,10 @@ class EventListener:
         """ Invoked by engine when an error state is encountered which is severe enough to cause pause """
         pass
 
+    def on_method_edited(self, live_edit: bool):
+        """ Invoked by engine when the method has been edited """
+        pass
+
     def on_connection_status_change(self, status: Literal["Disconnected", "Connected"]):
         """ Invoked by system tag Connection Status on value change """
         pass
@@ -203,6 +207,10 @@ class PerformanceTimer(EventListener):
     def on_connection_status_change(self, status: Literal["Disconnected", "Connected"]):
         with self:
             self._listener.on_connection_status_change(status)
+
+    def on_method_edited(self, live_edit):
+        with self:
+            self._listener.on_method_edited(live_edit)
 
     def __str__(self) -> str:
         return f"PerformanceTimer(listener: {self._listener}, warned: {self._warned}, is_tag: {self._is_tag}"
@@ -338,6 +346,13 @@ class EventEmitter:
                 listener.on_connection_status_change(status)
             except Exception:
                 logger.error(f"on_connection_status_change failed for listener '{listener}'", exc_info=True)
+
+    def emit_on_method_edited(self, live_edit: bool):
+        for listener in self._listeners:
+            try:
+                listener.on_method_edited(live_edit)
+            except Exception:
+                logger.error(f"on_method_edited failed for listener '{listener}'", exc_info=True)
 
 @dataclass(frozen=True)
 class BlockInfo:
