@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
@@ -14,6 +14,12 @@ import { DetailsSelectors } from './details.selectors';
 // noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class DetailsEffects {
+  private actions = inject(Actions);
+  private store = inject(Store);
+  private processUnitService = inject(ProcessUnitService);
+  private recentRunsService = inject(RecentRunsService);
+  private pubSubService = inject(PubSubService);
+
   fetchProcessValuesWhenPageInitialized = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.unitDetailsInitialized),
     switchMap(({unitId}) => {
@@ -222,10 +228,4 @@ export class DetailsEffects {
       return of(DetailsActions.controlStateChanged({oldControlState: previousControlState, newControlState: controlState}));
     })
   ));
-
-  constructor(private actions: Actions,
-              private store: Store,
-              private processUnitService: ProcessUnitService,
-              private recentRunsService: RecentRunsService,
-              private pubSubService: PubSubService) {}
 }
