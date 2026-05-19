@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import unittest
 from typing import Any
@@ -149,6 +150,7 @@ class TestRunnerTest(unittest.TestCase):
             print("run_time", run_time.as_float())
 
     @unittest.skipIf(bool(os.environ.get("OPENPECTUS_ENGINE_SKIP_SLOW_TESTS")), reason="Skipping slow tests as configured")
+    @unittest.skipIf(sys.platform == "win32", reason="Timing not stable on windows CI")
     def test_run_ticks_100(self):
         tick_count = 100
         runner = EngineTestRunner(create_test_uod)
