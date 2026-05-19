@@ -261,7 +261,7 @@ States:\n{states}""")
         # logger.info(f"Updating progress to {item.progress}")
 
     def get_record_by_node(self, node_id: str) -> RuntimeRecord | None:
-        """ Return record for the given exec_id or None if not found. """
+        """ Return record for the given node_id or None if not found. """
         index = self._node_record_map.get(node_id)
         if index is not None:
             return self._records[index]
@@ -275,6 +275,12 @@ States:\n{states}""")
                 f"get_record_by_instance_id failed to find record {instance_id=} because its index was too large. " +
                 f"{index=}, size={self.size()}"
             )
+
+    def get_record_by_instance_or_fail(self, instance_id: str) -> RuntimeRecord:
+        record = self.get_record_by_instance(instance_id)
+        if record is not None:
+            return record
+        raise ValueError(f"Record with instance_id '{instance_id}' not found")
 
     def _add_record(self, record: RuntimeRecord):
         index = len(self._records)
@@ -372,10 +378,10 @@ States:\n{states}""")
     def get_as_table(self, description: str = "") -> str:
         records = self.records.copy()
         lines = [f"Runtime records | {description}"]
-        lines.append("line | start | end   | runlog name           | node name            | states")
-        lines.append("-----|-------|-------|-----------------------|----------------------|-------------------")
+        lines.append("line | start | end   | runlog name                | node name            | states")
+        lines.append("-----|-------|-------|----------------------------|----------------------|-------------------")
         for r in records:
-            name = rjust(r.name or "", 20)
+            name = rjust(r.name or "", 25)
             arguments = next((st.arguments for st in r.states if len(st.arguments) > 0), "")
             node_name = rjust(arguments or r.node_class_name, 20)
 
@@ -384,7 +390,7 @@ States:\n{states}""")
             end = rjust(r.visit_end_tick if r.visit_end_tick > -1 else "-", 5)
             states = ", ".join([f"{st.state_name}: {st.state_tick}" for st in r.states])
             lines.append(f"{line}   {rjust(r.visit_start_tick, 5)}   {end}   {name}   {node_name}    {states}")
-        lines.append("-----|-------|-------|-----------------------|----------------------|-------------------")
+        lines.append("-----|-------|-------|----------------------------|----------------------|-------------------")
         return "\n".join(lines)
 
     def get_as_table_alt(self, description: str = "") -> str:
@@ -673,6 +679,12 @@ class RunLog:
         for item in self.items:
             if item.name == name:
                 return item
+
+    def get_item_by_name_or_fail(self, name: str) -> RunLogItem:
+        item = self.get_item_by_name(name)
+        if item is not None:
+            return item
+        raise ValueError(f"No item named '{name}' was found")
 
 class RunLogItem:
     def __init__(self) -> None:

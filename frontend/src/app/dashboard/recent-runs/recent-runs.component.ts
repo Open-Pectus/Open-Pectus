@@ -15,7 +15,7 @@ import { DashboardSelectors } from '../ngrx/dashboard.selectors';
   imports: [TableComponent],
   template: `
     <app-table class="w-full h-96" [columns]="columns" [data]="recentRuns()" (rowClicked)="navigateToRecentRun($event)"
-               [defaultSort]="defaultSort" [filter]="recentRunsFilter()" [extractId]="extractId" />
+               [defaultSort]="defaultSort" [filter]="recentRunsFilter()" [extractId]="extractId"/>
     @if (recentRuns().length === 0) {
       <div class="text-center p-2">No recent runs available</div>
     }
@@ -26,7 +26,7 @@ export class RecentRunsComponent implements OnInit {
   protected readonly columns = [
     {
       header: 'Unit',
-      key: 'engine_id',
+      key: 'engine_name',
     },
     {
       header: 'Started',
