@@ -25,7 +25,7 @@ dependencies = [
     "sqlalchemy==2.0.41",
     "asyncua==1.1.6",
     "labjack-ljm==1.23.0",
-    "pyright==1.1.402",
+    "pyright==1.1.409",
     "alembic==1.16.1",
     "sentry-sdk==2.19.2",
     "PyJWT==2.10.1",
@@ -132,7 +132,6 @@ reportImplicitStringConcatenation = true
 reportUnnecessaryTypeIgnoreComment = "warning"
 reportMatchNotExhaustive = true
 #reportImplicitOverride = true # TODO consider enabling this
-reportShadowedImports = true
 
 pythonVersion = "3.13"
 pythonPlatform = "Linux"

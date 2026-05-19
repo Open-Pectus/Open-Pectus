@@ -41,7 +41,7 @@ class PlotLogRepository(RepositoryBase):
             return entry
 
         # Make set of tags to store
-        tags_to_store = set()
+        tags_to_store: set[str] = set()
         tags_to_store.update([reading.tag_name for reading in engine_data.readings])
         tags_to_store.update([color_region.process_value_name for color_region in engine_data.plot_configuration.color_regions])
         tags_to_store.update([process_value_name_to_annotate for process_value_name_to_annotate in engine_data.plot_configuration.process_value_names_to_annotate])
