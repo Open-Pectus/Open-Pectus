@@ -104,8 +104,26 @@ class AnalyzerVisitorBase(NodeVisitor):
 class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
     """
     Checks:
-    * Presence of code in a Block following End block command
-    * Presence of code after "Stop" and "Restart" commands
+    1. Presence of code in a Block following 'End block' or 'End blocks'
+    2. Presence of code in any scope following 'Stop' or 'Restart' commands in that scope
+    3. Presence of code following a Block which does not contain End block(s)
+    4. Presence of code following a Block which contains Stop or Restart
+    5. Blank lines and comment lines are ignored
+    6. Only the first line of a detected range is reported
+
+    Following means nodes on the following-siblings-axis.
+
+    For each block, define quit_node as the first child node that quits the block, i.e.
+    End block(s)
+    For each scope, define terminate_node as the first child node that terminate program
+    flow, i.e. Stop and Restart
+    Define blocks and scopes 
+    Iterate tree and fill in both maps
+    Iterate until stable:
+        ...
+        If a scope has a terminate_node, mark the scope as terminate_node for parent 
+        scope, if any
+    
     """
 
     def __init__(self):
@@ -113,6 +131,11 @@ class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
         self.method_end: p.EngineCommandNode | None = None
         self.first_command_after_end: p.Node | None = None
         self.last_command_after_end: p.Node | None = None
+
+        self.blocks: list[p.BlockNode] = []
+        self.scopes: list[p.Node] = []
+        self.quit_nodes: dict[p.BlockNode, p.EndBlockNode | p.EndBlocksNode] = {}
+        self.terminate_nodes: dict[p.Node, p.Node] = {}
 
     def create_item(self, node: p.Node):
         return AnalyzerItem(
