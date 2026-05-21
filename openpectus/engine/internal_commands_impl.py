@@ -41,7 +41,6 @@ class StartEngineCommand(InternalEngineCommand):
             e._system_tags[SystemTagName.METHOD_STATUS].set_value(MethodStatusEnum.OK, e._tick_time)
             e._system_tags[SystemTagName.RUN_TIME].set_value(0.0, e._tick_time)
             e._system_tags[SystemTagName.PROCESS_TIME].set_value(0.0, e._tick_time)
-            e._system_tags[SystemTagName.RUN_COUNTER].set_value(0, e._tick_time)
 
             e.tracking.enable()
             e.emitter.emit_on_start(run_id)
