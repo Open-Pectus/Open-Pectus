@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
@@ -11,6 +11,12 @@ import { ProcessPlotSelectors } from './process-plot.selectors';
 // noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class ProcessPlotEffects {
+  private actions = inject(Actions);
+  private store = inject(Store);
+  private processUnitService = inject(ProcessUnitService);
+  private axesOverridesLocalStorageService = inject(AxesOverridesLocalStorageService);
+  private recentRunsService = inject(RecentRunsService);
+
   fetchPlotConfigurationOnComponentInitializationForUnit = createEffect(() => this.actions.pipe(
     ofType(ProcessPlotActions.processPlotComponentInitializedForUnit),
     switchMap(({unitId}) => {
@@ -82,10 +88,4 @@ export class ProcessPlotEffects {
       return of(ProcessPlotActions.xAxisProcessValueNameRestoredFromLocalStorage({xAxisProcessValueName: storedValue}));
     }),
   ));
-
-  constructor(private actions: Actions,
-              private store: Store,
-              private processUnitService: ProcessUnitService,
-              private axesOverridesLocalStorageService: AxesOverridesLocalStorageService,
-              private recentRunsService: RecentRunsService) {}
 }

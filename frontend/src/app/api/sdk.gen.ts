@@ -24,7 +24,6 @@ export class AggregatorService {
             url: '/engine-rest'
         });
     }
-    
 }
 
 @Injectable({
@@ -44,7 +43,6 @@ export class AuthService {
             url: '/auth/config'
         });
     }
-    
 }
 
 @Injectable({
@@ -86,7 +84,6 @@ export class FrontendPubsubService {
             url: '/api/trigger-publish-msw'
         });
     }
-    
 }
 
 @Injectable({
@@ -126,7 +123,6 @@ export class LspService {
             }
         });
     }
-    
 }
 
 @Injectable({
@@ -697,7 +693,6 @@ export class ProcessUnitService {
             }
         });
     }
-    
 }
 
 @Injectable({
@@ -917,7 +912,6 @@ export class RecentRunsService {
             }
         });
     }
-    
 }
 
 @Injectable({
@@ -961,7 +955,6 @@ export class VersionService {
             url: '/api/build_info'
         });
     }
-    
 }
 
 @Injectable({
@@ -1067,5 +1060,4 @@ export class WebpushService {
             }
         });
     }
-    
 }
