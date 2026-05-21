@@ -1,5 +1,4 @@
-import { NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, input, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, input, output } from '@angular/core';
 import { ProcessValue } from '../../api';
 import { ProcessValuePipe } from '../../shared/pipes/process-value.pipe';
 
@@ -11,7 +10,7 @@ export interface PvAndPosition {
 @Component({
   selector: 'app-process-value',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgIf, ProcessValuePipe],
+  imports: [ProcessValuePipe],
   template: `
     <div class="flex flex-col bg-sky-200 p-0.5 items-center gap-1 rounded select-none border border-sky-300"
          [class.cursor-pointer]="hasCommands(processValue())" (click)="onClick()"
@@ -22,28 +21,31 @@ export interface PvAndPosition {
            [class.!border-indigo-400]="processValue().simulated">
         {{ processValue() | processValue }}
 
-        <div *ngIf="processValue().simulated"
-             class="absolute -top-2 -left-0.5 !text-[0] bg-indigo-300 rounded-full border-indigo-400 border-b border-r"
-             title="Is simulated">
-          <div class="codicon-code-review codicon !text-[0.6rem] p-[2.5px]"></div>
-        </div>
+        @if (processValue().simulated) {
+          <div
+              class="absolute -top-2 -left-0.5 !text-[0] bg-indigo-300 rounded-full border-indigo-400 border-b border-r"
+              title="Is simulated">
+            <div class="codicon-code-review codicon !text-[0.6rem] p-[2.5px]"></div>
+          </div>
+        }
 
-        <div *ngIf="hasCommands(processValue())"
-             class="absolute -top-2 -right-0.5 !text-[0] bg-sky-200 rounded-full border-sky-300 border-b border-l"
-             [class.!border-indigo-400]="processValue().simulated"
-             [class.!bg-indigo-300]="processValue().simulated"
-             title="Has commands">
-          <div class="codicon-wand codicon !text-[0.6rem] p-[2.5px] -rotate-90"></div>
-        </div>
+        @if (hasCommands(processValue())) {
+          <div
+              class="absolute -top-2 -right-0.5 !text-[0] bg-sky-200 rounded-full border-sky-300 border-b border-l"
+              [class.!border-indigo-400]="processValue().simulated"
+              [class.!bg-indigo-300]="processValue().simulated"
+              title="Has commands">
+            <div class="codicon-wand codicon !text-[0.6rem] p-[2.5px] -rotate-90"></div>
+          </div>
+        }
       </div>
     </div>
   `,
 })
 export class ProcessValueComponent {
   processValue = input.required<ProcessValue>();
-  @Output() openCommands = new EventEmitter<PvAndPosition>();
-
-  constructor(private element: ElementRef<HTMLDivElement>) {}
+  readonly openCommands = output<PvAndPosition>();
+  private element = inject<ElementRef<HTMLDivElement>>(ElementRef);
 
   onClick() {
     if(!this.hasCommands(this.processValue())) return;

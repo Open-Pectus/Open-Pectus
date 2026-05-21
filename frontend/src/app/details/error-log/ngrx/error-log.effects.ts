@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
 import { ProcessUnitService, RecentRunsService } from '../../../api';
@@ -8,6 +8,11 @@ import { ErrorLogActions } from './error-log.actions';
 // noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class ErrorLogEffects {
+  private actions = inject(Actions);
+  private processUnitService = inject(ProcessUnitService);
+  private recentRunsService = inject(RecentRunsService);
+  private pubSubService = inject(PubSubService);
+
   fetchErrorLogWhenComponentInitializedForUnit = createEffect(() => this.actions.pipe(
     ofType(ErrorLogActions.errorLogComponentInitializedForUnit),
     switchMap(({unitId}) => {
@@ -46,9 +51,4 @@ export class ErrorLogEffects {
       );
     }),
   ));
-
-  constructor(private actions: Actions,
-              private processUnitService: ProcessUnitService,
-              private recentRunsService: RecentRunsService,
-              private pubSubService: PubSubService) {}
 }

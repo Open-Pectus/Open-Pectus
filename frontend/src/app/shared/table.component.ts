@@ -1,5 +1,5 @@
-import { DatePipe, NgFor, NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, Input, Output } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, input, Input, output } from '@angular/core';
 import { compareAsc, compareDesc } from 'date-fns';
 
 export interface TableColumn<T, E extends keyof T = keyof T> {
@@ -23,44 +23,55 @@ export interface DefaultTableSort<T> {
 @Component({
   selector: 'app-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgFor, NgIf],
+  imports: [],
   template: `
     <div class="bg-stone-100 rounded-md shadow-lg overflow-hidden">
       <table class="w-full table-fixed border-collapse">
         <thead>
         <tr class="bg-slate-600 text-white cursor-pointer select-none">
-          <th *ngFor="let column of columns" class="px-3 py-2" (click)="setSortByColumn(column)">
-            <span>{{ column.header }}</span>
-            <ng-container *ngIf="sortColumn === column">
-              <span *ngIf="sortDir === TableSortDirection.Descending" class="codicon codicon-arrow-up ml-1 -mr-5"></span>
-              <span *ngIf="sortDir === TableSortDirection.Ascending" class="codicon codicon-arrow-down ml-1 -mr-5"></span>
-            </ng-container>
-          </th>
+          @for (column of columns(); track column) {
+            <th class="px-3 py-2" (click)="setSortByColumn(column)">
+              <span>{{ column.header }}</span>
+              @if (sortColumn === column) {
+                @if (sortDir === TableSortDirection.Descending) {
+                  <span class="codicon codicon-arrow-up ml-1 -mr-5"></span>
+                }
+                @if (sortDir === TableSortDirection.Ascending) {
+                  <span class="codicon codicon-arrow-down ml-1 -mr-5"></span>
+                }
+              }
+            </th>
+          }
         </tr>
         </thead>
         <tbody class="cursor-pointer">
-        <tr *ngFor="let row of data" class="border-y last-of-type:border-none border-gray-300" (click)="rowClicked.emit(row)">
-          <td *ngFor="let column of columns" class="text-center px-3 py-2">
-            {{ format(row[column.key], column) }}
-          </td>
-        </tr>
+          @for (row of data; track extractId()(row)) {
+            <tr class="border-y last-of-type:border-none border-gray-300" (click)="rowClicked.emit(row)">
+              @for (column of columns(); track column) {
+                <td class="text-center px-3 py-2">
+                  {{ format(row[column.key], column) }}
+                </td>
+              }
+            </tr>
+          }
         </tbody>
       </table>
     </div>
   `,
 })
 export class TableComponent<T> {
-  @Input() columns?: TableColumn<T>[];
-  @Input() filter?: string;
-  @Output() rowClicked = new EventEmitter<T>();
+  readonly columns = input<TableColumn<T>[]>();
+  readonly filter = input<string>();
+  extractId = input.required<(x: T) => string>();
+  readonly rowClicked = output<T>();
   protected sortDir = TableSortDirection.Ascending;
   protected sortColumn?: TableColumn<T>;
   protected readonly TableSortDirection = TableSortDirection;
-
-  constructor(private datePipe: DatePipe, private cd: ChangeDetectorRef) {}
+  private datePipe = inject(DatePipe);
+  private cd = inject(ChangeDetectorRef);
 
   @Input() set defaultSort(defaultSort: DefaultTableSort<T>) {
-    this.sortColumn = this.columns?.find((column => column.key === defaultSort.columnKey));
+    this.sortColumn = this.columns()?.find((column => column.key === defaultSort.columnKey));
     this.sortDir = defaultSort.direction;
   }
 
@@ -68,7 +79,8 @@ export class TableComponent<T> {
 
   get data(): T[] | undefined {
     let data = this._data;
-    if(this.filter !== undefined) data = this.filterData(data, this.filter);
+    const filter = this.filter();
+    if(filter !== undefined) data = this.filterData(data, filter);
     if(this.sortColumn !== undefined) data = this.sortData(data, this.sortColumn);
     this.cd.markForCheck();
     return data;
@@ -149,7 +161,7 @@ export class TableComponent<T> {
 
   private filterData(data: T[] | undefined, filter: string) {
     return data?.filter(row => {
-      return this.columns?.some(column => {
+      return this.columns()?.some(column => {
         const value = row[column.key];
         let stringValue = '';
         if(column.isDate) {
