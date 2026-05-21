@@ -814,6 +814,9 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
 
     def check_command_node(self, node: p.Node):
         name = node.instruction_name
+        # ErrorInstructionNode has no name. Adopt entire line as name.
+        if name == "" and isinstance(node, p.ErrorInstructionNode):
+            name = node.line
 
         if not self.commands.has(name):
             if len(name) > 2 and self.commands.names:
