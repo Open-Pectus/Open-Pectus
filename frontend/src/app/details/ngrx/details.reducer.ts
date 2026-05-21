@@ -70,7 +70,7 @@ const reducer = createReducer(initialState,
     draft.shouldPoll = false;
   })),
   on(DetailsActions.processValuesFetched, (state, {processValues}) => produce(state, draft => {
-    draft.processValues = processValues;
+    draft.processValues = processValues.filter(processValue => !processValue.plot_only);
     draft.missingRoles = undefined;
   })),
   on(DetailsActions.processValuesFailedToLoad, (state, {error}) => produce(state, draft => {
@@ -82,7 +82,7 @@ const reducer = createReducer(initialState,
   on(DetailsActions.commandExamplesFetched, (state, {commandExamples}) => produce(state, draft => {
     draft.commandExamples = commandExamples;
   })),
-  on(DetailsActions.controlStateFetched, (state, {controlState}) => produce(state, draft => {
+  on(DetailsActions.controlStateFetched, DetailsActions.controlStateFetchedFromUpdate, (state, {controlState}) => produce(state, draft => {
     draft.previousControlState = state.controlState;
     draft.controlState = controlState;
     draft.optimisticClickedControlButtons = {start: false, stop: false, pause: false, hold: false};

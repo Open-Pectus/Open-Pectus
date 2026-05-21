@@ -4,7 +4,7 @@ import logging
 
 from Levenshtein import ratio
 
-from openpectus.lang.exec.visitor import NodeGenerator, NodeVisitor
+from openpectus.lang.exec.visitor import NodeGenerator, NodeVisitor, VisitResult
 import openpectus.lang.model.ast as p
 from openpectus.lang.exec.tags import TagValueCollection
 from openpectus.lang.exec.units import are_comparable, get_compatible_unit_names
@@ -130,19 +130,19 @@ class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
                 if isinstance(child, (p.EndBlockNode, p.EndBlocksNode)):
                     has_end = True
                     continue
-                if has_end and not isinstance(child, p.BlankNode):
+                if has_end and not isinstance(child, (p.BlankNode, p.CommentNode)):
                     self.add_item(self.create_item(child))
         yield from super().visit_BlockNode(node)
 
-    def visit_EngineCommandNode(self, node: p.EngineCommandNode):
-        super().visit_EngineCommandNode(node)
+    def visit_EngineCommandNode(self, node: p.EngineCommandNode) -> NodeGenerator:
+        yield from super().visit_EngineCommandNode(node)
         if not self.method_end and node.instruction_name in ["Stop", "Restart"]:
-            self.method_end = node
-        yield
+            if not isinstance(node.parent, (p.NodeWithTagOperatorValue, p.BlockNode)):
+                self.method_end = node
+        yield VisitResult.EndTick
 
     def visit_Node(self, node) -> NodeGenerator:
-        yield from ()
-        super().visit_Node(node)
+        yield from super().visit_Node(node)
         if self.method_end and not self.first_command_after_end:
             self.first_command_after_end = node
         if self.method_end:
@@ -229,17 +229,17 @@ class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
 
     def visit_EndBlockNode(self, node: p.EndBlockNode):
         self.check_global_end_block(node)
-        yield
+        yield VisitResult.EndTick
+
 
     def visit_EndBlocksNode(self, node: p.EndBlocksNode):
         self.check_global_end_block(node)
-        yield
+        yield VisitResult.EndTick
 
     def visit_EngineCommandNode(self, node: p.EngineCommandNode):
-        super().visit_EngineCommandNode(node)
+        yield from super().visit_EngineCommandNode(node)
         if node.instruction_name in ["Stop", "Restart"]:
             self.check_global_end_block(node)
-        yield
 
 
 class IndentationCheckAnalyzer(AnalyzerVisitorBase):

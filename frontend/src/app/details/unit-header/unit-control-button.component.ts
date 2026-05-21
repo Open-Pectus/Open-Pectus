@@ -1,5 +1,5 @@
 import { NgClass, TitleCasePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input, Input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, signal, inject } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { DetailsActions } from '../ngrx/details.actions';
 import { UnitControlCommands } from '../unit-control-commands.';
@@ -12,12 +12,12 @@ import { UnitControlCommands } from '../unit-control-commands.';
   template: `
     <button class="py-2 pr-5 pl-3.5 rounded-lg text-white bg-sky-700 flex items-center gap-2 tracking-wider"
             (click)="executeCommand()"
-            [disabled]="disabled || (toggled() && unCommand === undefined)"
-            [class.bg-slate-400]="disabled"
+            [disabled]="disabled() || (toggled() && unCommand() === undefined)"
+            [class.bg-slate-400]="disabled()"
             [style.margin]="showPressed() ? '3px 0 0 2px' : '0 2px 3px 0'"
-            [style.background-color]="toggled() ? toggledColor : null"
-            [style.box-shadow]="showPressed() ? null : disabled ? '2.5px 3px #cbd5e1' : ('2.5px 3px color-mix(in srgb, '+color()+', black 10%)')">
-      <span class="codicon" [ngClass]="'codicon-'+iconName"></span>{{ command | titlecase }}
+            [style.background-color]="toggled() ? toggledColor() : null"
+            [style.box-shadow]="showPressed() ? null : disabled() ? '2.5px 3px #cbd5e1' : ('2.5px 3px color-mix(in srgb, '+color()+', black 10%)')">
+      <span class="codicon" [ngClass]="'codicon-'+iconName()"></span>{{ command() | titlecase }}
     </button>
     @if (showLock()) {
       <button class="absolute top-0 w-full h-full flex items-center" (click)="onLockClicked()">
@@ -29,24 +29,24 @@ import { UnitControlCommands } from '../unit-control-commands.';
   `
 })
 export class UnitControlButtonComponent {
-  @Input() command?: UnitControlCommands;
-  @Input() unCommand?: UnitControlCommands;
-  @Input() iconName?: string;
-  @Input() disabled = false;
+  private store = inject(Store);
+
+  readonly command = input<UnitControlCommands>();
+  readonly unCommand = input<UnitControlCommands>();
+  readonly iconName = input<string>();
+  readonly disabled = input(false);
   toggled = input(false);
   optimisticClicked = input(false);
-  @Input() toggledColor = '#0f172a';
+  readonly toggledColor = input('#0f172a');
   hasLock = input(false);
   isLocked = signal(true);
   showLock = computed(() => this.hasLock() && this.isLocked() && !this.toggled() && !this.optimisticClicked());
   showPressed = computed(() => (this.toggled() && !this.optimisticClicked()) || (!this.toggled() && this.optimisticClicked()));
-  color = computed(() => this.toggled() ? this.toggledColor : '#0369a1');
-
-  constructor(private store: Store) {}
+  color = computed(() => this.toggled() ? this.toggledColor() : '#0369a1');
 
   executeCommand() {
     if(this.optimisticClicked()) return;
-    const command = this.toggled() ? this.unCommand : this.command;
+    const command = this.toggled() ? this.unCommand() : this.command();
     if(command === undefined) return;
     this.store.dispatch(DetailsActions.processUnitCommandButtonClicked({command}));
     this.isLocked.set(true);

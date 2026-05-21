@@ -1,6 +1,4 @@
-import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, EventEmitter, input, Output } from '@angular/core';
-import { PushPipe } from '@ngrx/component';
+import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { ProcessValue, TagDirection } from '../../api';
 import { DetailsSelectors } from '../ngrx/details.selectors';
@@ -8,11 +6,11 @@ import { ProcessValueComponent, PvAndPosition } from './process-value.component'
 import { TagDirectionPipe } from './tag-direction.pipe';
 
 @Component({
-    selector: 'app-process-values-categorized',
-    imports: [CommonModule, ProcessValueComponent, PushPipe, TagDirectionPipe],
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    template: `
-    @if (allProcessValues | ngrxPush) {
+  selector: 'app-process-values-categorized',
+  imports: [ProcessValueComponent, TagDirectionPipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    @if (allProcessValues()) {
       <div class="flex flex-col gap-4 -mt-1">
         @for (direction of tagDirections; track direction) {
           <div>
@@ -20,7 +18,7 @@ import { TagDirectionPipe } from './tag-direction.pipe';
             <div class="flex gap-2 items-start flex-wrap mt-1">
               @for (processValue of getProcessValuesOfCategory(direction); track processValue.name) {
                 <app-process-value [processValue]="processValue"
-                                   (openCommands)="openCommands.emit($event)"></app-process-value>
+                                   (openCommands)="openCommands.emit($event)" />
               } @empty {
                 No process values for this category
               }
@@ -32,7 +30,7 @@ import { TagDirectionPipe } from './tag-direction.pipe';
       <div class="flex gap-2 items-start flex-wrap">
         @for (processValue of processValues(); track processValue.name) {
           <app-process-value [processValue]="processValue"
-                             (openCommands)="openCommands.emit($event)"></app-process-value>
+                             (openCommands)="openCommands.emit($event)" />
         } @empty {
           <div class="m-auto">No process values available</div>
         }
@@ -42,12 +40,11 @@ import { TagDirectionPipe } from './tag-direction.pipe';
 })
 export class ProcessValuesCategorizedComponent {
   processValues = input<ProcessValue[]>();
-  @Output() openCommands = new EventEmitter<PvAndPosition>();
-  allProcessValues = this.store.select(DetailsSelectors.allProcessValues);
-  protected readonly tagDirections: TagDirection[] = ['input', 'output', 'na', 'unspecified']
+  readonly openCommands = output<PvAndPosition>();
+  protected readonly tagDirections: TagDirection[] = ['input', 'output', 'na', 'unspecified'];
   protected readonly Object = Object;
-
-  constructor(private store: Store) {}
+  private store = inject(Store);
+  allProcessValues = this.store.selectSignal(DetailsSelectors.allProcessValues);
 
   protected getProcessValuesOfCategory(direction: string) {
     const processValues = this.processValues()?.filter(processValue => processValue.direction === direction) ?? [];
