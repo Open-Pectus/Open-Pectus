@@ -1,9 +1,8 @@
 import { DATE_PIPE_DEFAULT_OPTIONS, DatePipe, DecimalPipe } from '@angular/common';
 import '@angular/common/locales/global/da';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { isDevMode, LOCALE_ID, provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { isDevMode, LOCALE_ID, provideZonelessChangeDetection } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { provideAnimations } from '@angular/platform-browser/animations';
 import { PreloadAllModules, provideRouter, withPreloading } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import { provideEffects } from '@ngrx/effects';
@@ -27,6 +26,7 @@ import { ProcessValuePipe } from './app/shared/pipes/process-value.pipe';
 
 import { handlers } from './msw/handlers';
 import { MswEnablement } from './msw/msw-enablement';
+import { provideAnimations } from '@angular/platform-browser/animations';
 
 async function enableMocking() {
   if(!MswEnablement.isEnabled) return;
@@ -57,7 +57,7 @@ async function enableMocking() {
 
 enableMocking().then(() => bootstrapApplication(AppComponent, {
   providers: [
-    provideExperimentalZonelessChangeDetection(),
+    provideZonelessChangeDetection(),
     provideStore(reducers, {
       metaReducers,
       runtimeChecks: {
