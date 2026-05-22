@@ -256,7 +256,6 @@ class AccumulatedColumnVolume(Tag):
     def on_tick(self, tick_time: float, increment_time: float):
         cv = self.column_volume.as_float()
         v = self.totalizer.as_float()
-
         value = 0.0
         if cv > 0.0:
             value = (v-self.v0) / cv
