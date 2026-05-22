@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostBinding, OnDestroy, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostBinding, OnDestroy, inject, viewChild } from '@angular/core';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { axisBottom, ScaleLinear, scaleLinear, select } from 'd3';
@@ -26,12 +26,15 @@ import { YAxisOverrideDialogComponent } from './y-axis-override-dialog.component
     imports: [YAxisOverrideDialogComponent, XAxisOverrideDialogComponent],
     template: `
     <svg class="h-full w-full overflow-visible select-none" #plot></svg>
-    <app-y-axis-override-dialog class="top-0 left-0" [margin]="padding"></app-y-axis-override-dialog>
-    <app-x-axis-override-dialog class="top-0 left-0" [margin]="padding"></app-x-axis-override-dialog>
+    <app-y-axis-override-dialog class="top-0 left-0" [margin]="padding" />
+    <app-x-axis-override-dialog class="top-0 left-0" [margin]="padding" />
   `
 })
 export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
-  @ViewChild('plot', {static: false}) plotElement?: ElementRef<SVGSVGElement>;
+  private store = inject(Store);
+  private processValuePipe = inject(ProcessValuePipe);
+
+  readonly plotElement = viewChild<ElementRef<SVGSVGElement>>('plot');
   @HostBinding('style.padding') readonly padding = '1rem .5rem';
   private plotConfiguration = this.store.select(ProcessPlotSelectors.plotConfiguration).pipe(
     filter(UtilMethods.isNotNullOrUndefined));
@@ -54,17 +57,15 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
   private zoomAndPan?: ProcessPlotZoomAndPan;
   private axesOverrides?: ProcessPlotAxesOverrides;
 
-  constructor(private store: Store,
-              private processValuePipe: ProcessValuePipe) {}
-
   ngOnDestroy() {
     this.componentDestroyed.next();
   }
 
   ngAfterViewInit() {
     this.plotConfiguration.pipe(take(1)).subscribe(plotConfiguration => {
-      if(this.plotElement === undefined) return;
-      this.svg = select<SVGSVGElement, unknown>(this.plotElement.nativeElement);
+      const plotElement = this.plotElement();
+      if(plotElement === undefined) return;
+      this.svg = select<SVGSVGElement, unknown>(plotElement.nativeElement);
       this.yScales = this.createYScales(plotConfiguration);
       this.insertSvgElements(plotConfiguration, this.svg);
 
@@ -78,7 +79,7 @@ export class ProcessPlotComponent implements OnDestroy, AfterViewInit {
       );
       this.axesOverrides = new ProcessPlotAxesOverrides(this.store, plotConfiguration, this.svg);
 
-      this.setupOnResize(this.plotElement.nativeElement);
+      this.setupOnResize(plotElement.nativeElement);
       this.setupOnDataChange(plotConfiguration);
       this.setupOnAxesConfigurationChange(this.svg);
       this.setupOnMarkedDirty();

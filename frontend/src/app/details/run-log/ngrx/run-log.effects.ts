@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
@@ -11,6 +11,12 @@ import { RunLogActions } from './run-log.actions';
 // noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class RunLogEffects {
+  private actions = inject(Actions);
+  private store = inject(Store);
+  private processUnitService = inject(ProcessUnitService);
+  private recentRunsService = inject(RecentRunsService);
+  private pubSubService = inject(PubSubService);
+
   fetchRunLogWhenComponentInitializedForUnit = createEffect(() => this.actions.pipe(
     ofType(RunLogActions.runLogComponentInitializedForUnit),
     switchMap(({unitId}) => {
@@ -67,9 +73,4 @@ export class RunLogEffects {
       return this.processUnitService.cancelRunLogLine({unitId, lineId});
     }),
   ), {dispatch: false});
-
-  constructor(private actions: Actions, private store: Store,
-              private processUnitService: ProcessUnitService,
-              private recentRunsService: RecentRunsService,
-              private pubSubService: PubSubService) {}
 }

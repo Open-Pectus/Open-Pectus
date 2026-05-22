@@ -91,6 +91,32 @@ Mark: C
         item = analyzer.items[0]
         self.assertEqual(item.range, p.Range(p.Position(3, 0), p.Position(6, 0)))
 
+    @unittest.skip(reason="Fix in issue #936")
+    def test_commands_after_stop_in_block(self):
+        program = build_program("""
+Mark: A
+Block: X
+    Mark: B
+    Stop
+Mark: C
+""")
+        analyzer = UnreachableCodeCheckAnalyzer()
+        analyzer.analyze(program)
+        self.assertEqual(1, len(analyzer.items))
+        #self.assertListEqual(analyzer.items, [])
+
+    def test_no_commands_after_stop_in_conditional(self):
+        program = build_program("""
+Mark: A
+Watch: Run time > 10s
+    Mark: B
+    Stop
+Mark: C
+""")
+        analyzer = UnreachableCodeCheckAnalyzer()
+        analyzer.analyze(program)
+        self.assertListEqual(analyzer.items, [])
+
 
 class InfiniteBlockCheckAnalyzerTest(unittest.TestCase):
     def test_missing_global_end(self):

@@ -75,24 +75,22 @@ class AccumulatorTag(Tag):
         self.totalizer: Tag = totalizer
         self.unit = self.totalizer.unit
         self.v0: float | None = None
+        self.value = 0.0
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(name="{self.name}", value="{self.value}", v0={self.v0})'
 
     def reset(self):
         self.v0 = self.totalizer.as_float()
-        self.value = 0.0
         assert self.v0 is not None
+        self.set_value(0.0, time.time())
 
     def on_start(self, run_id: str):
         self.reset()
 
     def on_tick(self, tick_time: float, increment_time: float):
         assert self.v0 is not None, f"Error in aggregator tag '{self.name}', v0 was not set."
-        try:
-            self.value = self.totalizer.as_float() - self.v0
-        except ValueError:
-            self.value = 0.0
+        self.set_value(self.totalizer.as_float() - self.v0, tick_time)
 
 
 class BlockTimeTag(Tag):
@@ -114,7 +112,6 @@ class BlockTimeTag(Tag):
     def on_start(self, run_id):
         self.value = 0.0
         self._stack.clear()
-        self._stack.append(BlockTimeTag.StackItem("root"))
         self.tracer.trace()
 
     def on_block_start(self, block_info):
@@ -131,7 +128,7 @@ class BlockTimeTag(Tag):
         for item in self._stack:
             item.value += increment_time
         self.value = self.get_value()
-        # self.tracer.trace(f"{self.value=}")
+        self.tracer.trace(f"value: {self.value}")
 
     def on_runstate_change(self, state_change):
         if state_change == RunStateChange.PAUSE:
@@ -171,6 +168,7 @@ class ScopeTimeTag(Tag):
     def on_scope_end(self, scope_info):
         del self._timers[scope_info.node_id]
         self._stack.pop()
+        self.tracer.trace()
 
     def on_tick(self, tick_time, increment_time):
         if self._paused:
@@ -178,7 +176,7 @@ class ScopeTimeTag(Tag):
         for key in self._timers.keys():
             self._timers[key] += increment_time
         self.value = self.get_value()
-        self.tracer.trace(f"{self.value}")
+        self.tracer.trace(f"value: {self.value}")
 
     def on_runstate_change(self, state_change):
         if state_change == RunStateChange.PAUSE:
@@ -221,7 +219,7 @@ class AccumulatorBlockTag(Tag):
             acc.on_tick(tick_time, increment_time)
 
         # apply the current value
-        self.value = self.cur_accumulator.get_value()
+        super().set_value(self.cur_accumulator.get_value(), tick_time)
 
     def on_block_start(self, block_info: BlockInfo):
         self.cur_block = block_info
@@ -248,8 +246,8 @@ class AccumulatedColumnVolume(Tag):
 
     def reset(self):
         self.v0 = self.totalizer.as_float()
-        self.value = 0.0
         assert self.v0 is not None
+        super().set_value(0.0, time.time())
 
     def on_start(self, run_id: str):
         self.reset()
@@ -257,7 +255,8 @@ class AccumulatedColumnVolume(Tag):
     def on_tick(self, tick_time: float, increment_time: float):
         cv = self.column_volume.as_float()
         v = self.totalizer.as_float()
-        if cv == 0.0:
-            self.value = None
-        else:
-            self.value = (v-self.v0) / cv
+        value = 0.0
+        if cv > 0.0:
+            value = (v-self.v0) / cv
+        super().set_value(value, tick_time)
+        

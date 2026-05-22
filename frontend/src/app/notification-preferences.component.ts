@@ -1,9 +1,8 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, ElementRef, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, ElementRef, inject, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SwPush } from '@angular/service-worker';
-import { PushPipe } from '@ngrx/component';
 import { Store } from '@ngrx/store';
 import { firstValueFrom, map } from 'rxjs';
 import { NotificationScope, NotificationTopic, WebPushNotificationPreferences, WebpushService, WebPushSubscription } from './api';
@@ -13,10 +12,11 @@ import { AppSelectors } from './ngrx/app.selectors';
 import { notificationScopes, topics } from './notification.types';
 import { MultiSelectComponent } from './shared/multi-select.component';
 import { UtilMethods } from './shared/util-methods';
+import { AsyncPipe } from '@angular/common';
 
 @Component({
   selector: 'app-notification-preferences',
-  imports: [ReactiveFormsModule, PushPipe, MultiSelectComponent],
+  imports: [ReactiveFormsModule, MultiSelectComponent, AsyncPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <button #bell class="codicon codicon-bell !text-xl" (click)="onBellClick()"></button>
@@ -25,7 +25,7 @@ import { UtilMethods } from './shared/util-methods';
          class="text-black bg-white border-slate-400 p-3.5 border rounded-lg m-0 shadow-lg shadow-slate-500 outline outline-4 outline-slate-300"
          [style.top.px]="bellPosition.bottom" [style.left.px]="popoverLeft" [style.width.px]="popoverWidth">
       <label class="flex items-center gap-2">
-        <input type="checkbox" [checked]="hasSubscription | ngrxPush" class="w-5 h-5 accent-blue-500"
+        <input type="checkbox" [checked]="hasSubscription | async" class="w-5 h-5 accent-blue-500"
                (change)="onEnabledChanged($event)"> Notifications enabled (this device)
       </label>
       <form [formGroup]="formGroup">
@@ -45,13 +45,13 @@ import { UtilMethods } from './shared/util-methods';
           </label>
           @if (specificProcessUnitsSelected) {
             <app-multi-select class="ml-7 border-l pl-3.5 border-slate-400" [formControlName]="processUnitsControlName"
-                              [options]="processUnitOptions()"></app-multi-select>
+                              [options]="processUnitOptions()" />
           }
         </div>
 
         <div class="flex flex-col">
           <h1 class="font-bold mt-4 mb-0.5">Topics:</h1>
-          <app-multi-select [formControlName]="topicsControlName" [options]="topicOptions"></app-multi-select>
+          <app-multi-select [formControlName]="topicsControlName" [options]="topicOptions" />
         </div>
       </form>
       <button class="bg-green-300 py-1.5 px-2.5 rounded-md border-slate-400 absolute right-4 bottom-4" (click)="onTestNotificationClick()">
@@ -61,8 +61,14 @@ import { UtilMethods } from './shared/util-methods';
   `,
 })
 export class NotificationPreferencesComponent {
-  @ViewChild('popover') popover!: ElementRef<HTMLDivElement>;
-  @ViewChild('bell') bell!: ElementRef<HTMLButtonElement>;
+  private store = inject(Store);
+  private webpushService = inject(WebpushService);
+  private swPush = inject(SwPush);
+  private cdRef = inject(ChangeDetectorRef);
+  private router = inject(Router);
+
+  readonly popover = viewChild.required<ElementRef<HTMLDivElement>>('popover');
+  readonly bell = viewChild.required<ElementRef<HTMLButtonElement>>('bell');
   protected readonly notificationScopes = notificationScopes;
   protected readonly popoverWidth = 350; // When popover anchor positioning is widely available that should be used instead.
 
@@ -82,11 +88,7 @@ export class NotificationPreferencesComponent {
   });
   protected hasSubscription = this.swPush.subscription.pipe(map(subscription => subscription !== null));
 
-  constructor(private store: Store,
-              private webpushService: WebpushService,
-              private swPush: SwPush,
-              private cdRef: ChangeDetectorRef,
-              private router: Router) {
+  constructor() {
     this.formGroup.valueChanges.pipe(takeUntilDestroyed()).subscribe(_ => {
       this.webpushService.saveNotificationPreferences({requestBody: this.formGroup.value as WebPushNotificationPreferences}).subscribe();
     });
@@ -123,9 +125,9 @@ export class NotificationPreferencesComponent {
   }
 
   onBellClick() {
-    const bellBoundingRect = this.bell.nativeElement.getBoundingClientRect();
+    const bellBoundingRect = this.bell().nativeElement.getBoundingClientRect();
     this.bellPosition = {bottom: bellBoundingRect.bottom, right: bellBoundingRect.right};
-    this.popover.nativeElement.showPopover();
+    this.popover().nativeElement.showPopover();
     this.webpushService.getNotificationPreferences().subscribe(preferences => {
       this.formGroup.reset(preferences, {emitEvent: false});
       this.cdRef.markForCheck();
