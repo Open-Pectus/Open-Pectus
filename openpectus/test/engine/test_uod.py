@@ -23,6 +23,7 @@ class TestRegexs_named_groups(unittest.TestCase):
         self.assertEqual(['kg'], parser.get_units())
         # multiple units
         parser = RegexNamedArgumentParser(RegexNumber(units=["kg", "g", "m2"]))
+        self.assertEqual(["kg", "g", "m2"], parser.get_units())
         # unit with parenthesis
         parser = RegexNamedArgumentParser(RegexNumber(units=["(L/h)/%"]))
         self.assertEqual(["(L/h)/%"], parser.get_units())
