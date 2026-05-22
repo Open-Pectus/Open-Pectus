@@ -278,11 +278,11 @@ class DerivedTag(Tag, ChangeListener):
                  fn: Callable[..., TagValueType],
                  input_tags: list[Tag],
                  calculate_on_tick: None | bool = None,
-                 tick_time = None,
-                 value = None,
-                 unit = None,
-                 direction = TagDirection.NA,
-                 format_fn = None):
+                 tick_time=None,
+                 value=None,
+                 unit=None,
+                 direction=TagDirection.NA,
+                 format_fn=None):
         super().__init__(name, tick_time, value, unit, direction, format_fn)
         self._fn = fn
         self._input_tags = input_tags
@@ -299,8 +299,8 @@ class DerivedTag(Tag, ChangeListener):
         try:
             return self._fn(*input_tag_values)
         except Exception as e:
-            logger.error(f"Calculation of tag '{self.name}' with function "+
-                         f"'{self._fn.__name__}' called with arguments "+
+            logger.error(f"Calculation of tag '{self.name}' with function " +
+                         f"'{self._fn.__name__}' called with arguments " +
                          f"{input_tag_values} failed with exception {e}.")
 
     def _set_calculated_value(self):
@@ -320,11 +320,11 @@ class DerivedTag(Tag, ChangeListener):
         self._set_calculated_value()
 
     def clear_changes(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     @property
     def changes(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     @property
     def input_tag_simulated(self):
@@ -334,7 +334,7 @@ class DerivedTag(Tag, ChangeListener):
         """The DerivedTag can attain simulated status by two means:
            1) An input tag is simulated
            2) The DerivedTag itself is simulated
-           
+
            Simulation of the DerivedTag itself takes priority."""
         if not _internal_call:
             self._simulated_directly = True
