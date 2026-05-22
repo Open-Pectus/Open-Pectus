@@ -21,6 +21,7 @@ def generate_csv_string(plot_log: PlotLog, recent_run: RecentRun):
 def _write_metadata_rows(csv_writer, plot_log: PlotLog, recent_run: RecentRun):
     csv_writer.writerow(['# Run Id', recent_run.run_id])
     csv_writer.writerow(['# Engine Id', recent_run.engine_id])
+    csv_writer.writerow(['# Engine Name', recent_run.engine_name])
     csv_writer.writerow(['# Engine Computer Name', recent_run.engine_computer_name])
     csv_writer.writerow(['# Open Pectus Engine Version', recent_run.engine_version])
     csv_writer.writerow(['# Engine Hardware string', recent_run.engine_hardware_str])
