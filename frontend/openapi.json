@@ -2896,6 +2896,10 @@
           "simulated": {
             "type": "boolean",
             "title": "Simulated"
+          },
+          "plot_only": {
+            "type": "boolean",
+            "title": "Plot Only"
           }
         },
         "type": "object",
@@ -3097,6 +3101,10 @@
             "format": "date-time",
             "title": "Completed Date"
           },
+          "uod_name": {
+            "type": "string",
+            "title": "Uod Name"
+          },
           "uod_filename": {
             "type": "string",
             "title": "Uod Filename"
@@ -3136,6 +3144,11 @@
             "type": "array",
             "title": "Contributors",
             "default": []
+          },
+          "engine_name": {
+            "type": "string",
+            "title": "Engine Name",
+            "readOnly": true
           }
         },
         "type": "object",
@@ -3144,6 +3157,7 @@
           "run_id",
           "started_date",
           "completed_date",
+          "uod_name",
           "uod_filename",
           "uod_author_name",
           "uod_author_email",
@@ -3151,7 +3165,8 @@
           "engine_version",
           "engine_hardware_str",
           "aggregator_computer_name",
-          "aggregator_version"
+          "aggregator_version",
+          "engine_name"
         ],
         "title": "RecentRun",
         "description": "Represents a historical run of a process unit. "

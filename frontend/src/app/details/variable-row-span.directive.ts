@@ -1,9 +1,11 @@
-import { AfterViewInit, ChangeDetectorRef, Directive, ElementRef, HostBinding, OnDestroy } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Directive, ElementRef, HostBinding, inject, OnDestroy } from '@angular/core';
 
 @Directive({
   selector: '[appVariableRowSpan]',
 })
 export class VariableRowSpanDirective implements AfterViewInit, OnDestroy {
+  private ref = inject<ElementRef<HTMLElement>>(ElementRef);
+  private cd = inject(ChangeDetectorRef);
   private rowSpan = 0;
   private collapsibleElement?: HTMLElement;
   private readonly rowGap = 32;
@@ -12,9 +14,6 @@ export class VariableRowSpanDirective implements AfterViewInit, OnDestroy {
     this.rowSpan = Math.ceil(collapsibleElementHeight) + this.rowGap;
     this.cd.markForCheck();
   });
-
-  constructor(private ref: ElementRef<HTMLElement>,
-              private cd: ChangeDetectorRef) {}
 
   @HostBinding('style.grid-row') get gridRow() {
     return `span ${this.rowSpan} / span ${this.rowSpan}`;
