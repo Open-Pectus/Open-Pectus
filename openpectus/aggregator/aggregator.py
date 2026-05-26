@@ -51,7 +51,7 @@ class FromEngine:
         if recent_engine is not None:  # reconnecting an existing engine
             if recent_engine.run_id is not None:  # that was in an active run when disconnected
                 run_id = recent_engine.run_id
-                logger.debug(f"Applying run_data {run_id=} from recent_engine")
+                logger.info(f"Applying run_data {run_id=} from recent_engine")
                 if recent_engine.run_started is None:
                     logger.warning("Recent engine had a run without run_started value. Using now as run_started")
                     run_started = datetime.now(UTC)
@@ -206,7 +206,7 @@ class FromEngine:
                     else:
                         engine_data.run_data.interrupted_by_error = False
 
-                # The Mark tag is used to "set at mark" in a plot to note that something happened
+                # The Mark tag is used to "set a mark" in a plot to note that something happened
                 # at that time. The value is set by the "Mark" command and is automatically reset
                 # after it has been archived on the engine. We should only save the non-reset value.
                 if changed_tag_value.name == SystemTagName.MARK and changed_tag_value.value == "":
@@ -236,7 +236,7 @@ class FromEngine:
         tag_values = engine_data.tags_info.map.values()
         latest_tag_tick_time = max([tag.tick_time for tag in tag_values]) if len(tag_values) > 0 else 0
         time_threshold_exceeded = latest_persisted_tick_time is None \
-                                  or latest_tag_tick_time - latest_persisted_tick_time > engine_data.data_log_interval_seconds
+            or latest_tag_tick_time - latest_persisted_tick_time > engine_data.data_log_interval_seconds
 
         if engine_data.run_data.run_id is not None and time_threshold_exceeded:
             tag_values_to_persist = [tag_value.model_copy() for tag_value in engine_data.tags_info.map.values()
