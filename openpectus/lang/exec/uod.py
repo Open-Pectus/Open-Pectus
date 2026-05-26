@@ -910,8 +910,6 @@ class UodBuilder:
             command_options: optional
                 Dictionary that maps command names to their pcode implementation.
         """
-        if not self.tags.has(tag_name):
-            raise ValueError(f"Cannot add process value choice for tag name {tag_name}. The tag name was not found")
         if not command_options:
             raise ValueError("Cannot add process value choice without any command_options. Use 'with_process_value' instead.")
         if command_options is not None:
@@ -1027,7 +1025,7 @@ class RegexNamedArgumentParser:
         if "number_unit" not in self.get_named_groups():
             return []
         start = self.regex.index("<number_unit>") + len("<number_unit>")
-        end = self.regex.index(")", start)
+        end = self.regex.rindex(")", start)
         result = unescape(self.regex[start: end]).split("|")
         return result
 
