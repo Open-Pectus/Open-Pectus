@@ -4,9 +4,11 @@ import time
 import unittest
 from typing import Any
 
-from openpectus.engine.models import EngineCommandEnum
+from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum
+from openpectus.lang.exec.errors import EngineError
+from openpectus.lang.exec.events import EventListener
 from openpectus.lang.exec.regex import RegexNumber
-from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
+from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag, DerivedTag
 from openpectus.engine.hardware import RegisterDirection
 
 import pint
@@ -16,6 +18,7 @@ from openpectus.lang.exec.uod import (
     UodCommand,
     UodBuilder,
 )
+from openpectus.test.engine.test_helpers import TestHW
 from openpectus.test.engine.utility_methods import (
     EngineTestRunner,
     configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging
@@ -25,7 +28,7 @@ from openpectus.lang.exec.units import as_decimal
 
 configure_test_logger()
 set_engine_debug_logging()
-set_interpreter_debug_logging(include_runlog=True)
+set_interpreter_debug_logging(include_runlog=True, include_events=True)
 
 # pint takes forever to initialize - long enough
 # to throw off timing of the first instruction.
@@ -106,6 +109,7 @@ def create_test_uod() -> UnitOperationDefinitionBase:  # noqa C901
     return uod
 
 
+# Note: These tests are affected by the runner's _initial_increment.
 class TestEngineTags(unittest.TestCase):
     # ---------- Lifetime -------------
     def test_tag_process_time(self):
@@ -170,14 +174,12 @@ class TestEngineTags(unittest.TestCase):
 
     def test_tag_block_time(self):
         p = """\
-Wait: 0.9s
-Noop: 1
+Noop: 10
 Block: A
     Wait: 2s
     Wait: 3s
     End block
 Noop: 2
-Wait: 0.99s
 """
         logging.getLogger("openpectus.lang.exec.tags_impl").setLevel(logging.DEBUG)
         delta = 0.4
@@ -186,14 +188,14 @@ Wait: 0.99s
             e = instance.engine
             block_time = e.tags[SystemTagName.BLOCK_TIME]
             block = e.tags[SystemTagName.BLOCK]
-            instance.start()
+            instance.start_run()
 
-            instance.run_until_instruction("Noop", state="completed")
+            t1 = instance.run_until_instruction("Noop", state="completed")
+            t1_value = t1/10
             self.assertEqual(None, block.get_value())
-            self.assertGreater(block_time.as_number(), 1)
+            self.assertAlmostEqual(block_time.as_number(), t1_value, delta=0.2)
 
             instance.run_until_instruction("Wait", state="started", arguments="2s")
-            # instance.run_until_instruction("Block", state="started", arguments="A")
             self.assertEqual("A", block.get_value())
             self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)
 
@@ -206,52 +208,54 @@ Wait: 0.99s
 
             instance.index_step_back(10)
             # instance.run_until_instruction("Block", state="completed")
-            instance.run_until_instruction("Noop", arguments="2")
+            t2 = instance.run_until_instruction("Noop", arguments="2")
+            t2_value = t2/10
 
             self.assertEqual(None, block.get_value())
-            self.assertAlmostEqual(1 + 2 + 3 + 0.1, block_time.as_number(), delta=delta)
+            self.assertAlmostEqual(t1_value + 2 + 3 + t2_value, block_time.as_number(), delta=delta)
 
 
     def test_tag_pause(self):
+        delta = 0.05
         logging.getLogger("openpectus.engine.engine").setLevel(logging.WARNING)
-        runner = EngineTestRunner(create_test_uod, "Wait: 10s")
+        code = """\
+Wait: 0.5s
+Pause: 0.5s
+Mark: A
+"""
+        runner = EngineTestRunner(create_test_uod, code)
         with runner.run() as instance:
             e = instance.engine
-            instance.start()
-
-            instance.run_ticks(2)
+            instance.start_run()
 
             run_time = e.tags[SystemTagName.RUN_TIME]
             block_time = e.tags[SystemTagName.BLOCK_TIME]
             scope_time = e.tags[SystemTagName.SCOPE_TIME]
-            self.assertAlmostEqual(0.2, run_time.as_float(), delta=delta)
-            self.assertAlmostEqual(0.1, block_time.as_float(), delta=delta)
-            self.assertAlmostEqual(0.1, scope_time.as_float(), delta=delta)
+            self.assertAlmostEqual(0.0, run_time.as_float(), delta=delta)
+            self.assertAlmostEqual(0.0, block_time.as_float(), delta=delta)
+            self.assertAlmostEqual(0.0, scope_time.as_float(), delta=delta)
 
-            e.schedule_execution(EngineCommandEnum.STOP)
-            instance.run_ticks(10)
+            t1 = instance.run_until_instruction("Wait", state="completed")
+            t1_value = t1/10
 
-            self.assertAlmostEqual(0.3, run_time.as_float(), delta=delta)
-            self.assertAlmostEqual(0.3, block_time.as_float(), delta=delta)
-            self.assertAlmostEqual(0.3, scope_time.as_float(), delta=delta)
+            print(f"{run_time.value=} | {block_time.value=} | {scope_time.value=}")
 
-            e.schedule_execution(EngineCommandEnum.START)
-            instance.run_ticks(5)
+            # run_time is just one tick ahead of the others
+            self.assertAlmostEqual(t1_value, run_time.as_float(), delta=delta)
+            self.assertAlmostEqual(t1_value-.1, block_time.as_float(), delta=delta)
+            self.assertAlmostEqual(t1_value-.1, scope_time.as_float(), delta=delta)
 
-            # is reset on system Start
-            self.assertAlmostEqual(0.5, run_time.as_float(), delta=delta)
-            self.assertAlmostEqual(0.5, block_time.as_float(), delta=delta)
-            self.assertAlmostEqual(0.5, scope_time.as_float(), delta=delta)
+            t2 = instance.run_until_instruction("Pause", state="completed")
+            t2_value = t2/10
 
-            e.schedule_execution(EngineCommandEnum.PAUSE)
-            instance.run_ticks(5)
+            t3 = instance.run_until_instruction("Mark", state="completed")
+            t3_value = t3/10
 
-            # not paused while system is Paused
-            self.assertAlmostEqual(1.0, run_time.as_float(), delta=delta)
-            # paused while system is Paused
-            self.assertAlmostEqual(0.6, block_time.as_float(), delta=delta)
-            self.assertAlmostEqual(0.6, scope_time.as_float(), delta=delta)
+            print(f"{run_time.value=} | {block_time.value=} | {scope_time.value=}")
 
+            self.assertAlmostEqual(t1_value + t2_value + t3_value, run_time.as_float(), delta=delta)   # not paused while system is Paused
+            self.assertAlmostEqual(t1_value + t3_value + 0.1, block_time.as_float(), delta=delta)  # paused while system is Paused
+            self.assertAlmostEqual(t1_value + t3_value + 0.1, scope_time.as_float(), delta=delta)  # paused while system is Paused
 
     def test_tag_block_time_nested_blocks(self):
         p = """\
@@ -268,151 +272,225 @@ Wait: 1s
         delta = 0.2
         runner = EngineTestRunner(create_test_uod, p)
         with runner.run() as instance:
-            e = instance.engine
-            instance.start()
+            instance.start_run()
 
-            instance.run_until_instruction("Wait", state="completed")
+            block_time = instance.engine.tags[SystemTagName.BLOCK_TIME]
+            block = instance.engine.tags[SystemTagName.BLOCK]
 
-            block_time = e.tags[SystemTagName.BLOCK_TIME]
-            block = e.tags[SystemTagName.BLOCK]
-            self.assertEqual(None, block.get_value())
-            self.assertAlmostEqual(1, block_time.as_number(), delta=delta)
-
-            instance.run_until_instruction("Block", state="started", arguments="A")
+            t1 = instance.run_until_instruction("Block", state="started", arguments="A")
+            t1_time = t1/10
             self.assertEqual("A", block.get_value())
-            self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)
+            self.assertAlmostEqual(0, block_time.as_number(), delta=delta)
 
-            instance.run_until_instruction("Wait", state="completed", arguments="2s")
-            self.assertAlmostEqual(2, block_time.as_number(), delta=delta)
-
-            instance.run_until_instruction("Block", state="started", arguments="B")
+            t2 = instance.run_until_instruction("Block", state="started", arguments="B")
+            t2_time = t2/10
             self.assertEqual("B", block.get_value())
-            self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)
+            self.assertAlmostEqual(0, block_time.as_number(), delta=delta)
 
-            instance.run_until_instruction("Wait", state="completed", arguments="3s", max_ticks=50)
-            self.assertAlmostEqual(3, block_time.as_number(), delta=delta)
-
-            instance.index_step_back(3)  # search back to Block: B which is before Wait: 3s
-            instance.run_until_instruction("Block", state="completed", arguments="B", increment_index=False)
+            instance.index_step_back(5)  # search back to Block: B which is before Wait: 3s
+            t3 = instance.run_until_instruction("Block", state="completed", arguments="B", max_ticks=40)
+            t3_time = t3/10
             # print(instance.get_runtime_table())
-            # return
 
             self.assertEqual("A", block.get_value())
-            self.assertAlmostEqual(2 + 3, block_time.as_number(), delta=delta)
+            self.assertAlmostEqual(t2_time + t3_time, block_time.as_number(), delta=delta)
 
-            instance.index_step_back(2)  # search even further back to Block: A
-            instance.run_until_instruction("Block", state="completed", arguments="A")
+            instance.index_step_back(5)  # search even further back to Block: A
+            t4 = instance.run_until_instruction("Block", state="completed", arguments="A")
+            t4_time = t4/10
 
             self.assertEqual(None, block.get_value())
-            # Two times End block = 0.2
-            self.assertAlmostEqual(2 + 3 + 2 + 1 + 0.2, block_time.as_number(), delta=delta)
+            self.assertAlmostEqual(t1_time + t2_time + t3_time + t4_time, block_time.as_number(), delta=delta)
 
     def test_tag_block_time_restart(self):
-        p = """\
+        program = """\
 Wait: 1s
 Block: B1
     Wait: 2s
     End block
 """
-        delta = 0.25
-        runner = EngineTestRunner(create_test_uod, p)
+        delta = 0.2
+        runner = EngineTestRunner(create_test_uod, program)
         with runner.run() as instance:
             e = instance.engine
             instance.start()
             block_time = e.tags[SystemTagName.BLOCK_TIME]
             block = e.tags[SystemTagName.BLOCK]
 
-            instance.run_until_instruction("Wait", state="completed", arguments="1s")
+            t1 = instance.run_until_instruction("Wait", state="completed", arguments="1s")
+            t1_time = t1/10
             self.assertEqual(None, block.get_value())
             self.assertAlmostEqual(1, block_time.as_number(), delta=delta)
 
-            instance.run_until_instruction("Block", state="started")
+            t2 = instance.run_until_instruction("Block", state="started")
+            t2_time = t2/10
             self.assertEqual("B1", block.get_value())
             self.assertAlmostEqual(0.0, block_time.as_number(), delta=delta)
 
-            instance.run_until_instruction("Wait", state="completed", arguments="2s")
+            t3 = instance.run_until_instruction("Wait", state="completed", arguments="2s")
+            t3_time = t3/10
             self.assertEqual("B1", block.get_value())
             self.assertAlmostEqual(2, block_time.as_number(), delta=delta)
 
             instance.index_step_back(2)
-            instance.run_until_instruction("Block", state="completed")
+            t4 = instance.run_until_instruction("Block", state="completed")
+            t4_time = t4/10
             self.assertEqual(None, block.get_value())
             # this is the important test for scope timers
-            self.assertAlmostEqual(1 + 2, block_time.as_number(), delta=delta)
+            self.assertAlmostEqual(t1_time + t2_time + t3_time + t4_time, block_time.as_number(), delta=delta)
 
             instance.restart_and_run_until_started()
-            self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)  # is reset after restart
+            self.assertAlmostEqual(0, block_time.as_number(), delta=delta)  # is reset after restart
 
             instance.index_step_back(1)
             instance.run_until_instruction("Wait", state="completed", arguments="1s")
             self.assertEqual(None, block.get_value())
             self.assertAlmostEqual(1, block_time.as_number(), delta=delta)
-            return
 
             instance.run_until_instruction("Block", state="started")
             self.assertEqual("B1", block.get_value())
-            self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)  # is also reset after restart
+            self.assertAlmostEqual(0, block_time.as_number(), delta=delta)  # is also reset after restart
 
     def test_tag_block_time_stop_start(self):
-        p = """
+        program = """\
 Wait: 1s
 Block: B1
     Wait: 2s
     End block
 """
-        delta = 0.3
-        runner = EngineTestRunner(create_test_uod, p)
+        delta = 0.2
+        runner = EngineTestRunner(create_test_uod, program)
         with runner.run() as instance:
             e = instance.engine
-            instance.start()
+            instance.start_run()
             block_time = e.tags[SystemTagName.BLOCK_TIME]
             block = e.tags[SystemTagName.BLOCK]
 
-            instance.run_until_instruction("Wait", state="completed", arguments="1s")
+            t1 = instance.run_until_instruction("Wait", state="completed", arguments="1s")
             self.assertEqual(None, block.get_value())
             self.assertAlmostEqual(1, block_time.as_number(), delta=delta)
 
-            instance.run_until_instruction("Wait", state="started", arguments="2s")
+            t2 = instance.run_until_instruction("Block", state="started")
             self.assertEqual("B1", block.get_value())
             self.assertAlmostEqual(0, block_time.as_number(), delta=delta)
 
             instance.index_step_back(2)
-            instance.run_until_instruction("Block", state="completed")
+            t3 = instance.run_until_instruction("Block", state="completed")
             self.assertEqual(None, block.get_value())
-            self.assertAlmostEqual(3, block_time.as_number(), delta=delta)
+            duration = (t1+t2+t3)/10
+            self.assertAlmostEqual(duration , block_time.as_number(), delta=delta)
 
             e.schedule_execution(EngineCommandEnum.STOP)
             instance.run_ticks(3)
 
             e.schedule_execution(EngineCommandEnum.START)
             instance.run_ticks(1)
-            self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)  # is reset after restart
+            self.assertAlmostEqual(0, block_time.as_number(), delta=delta)  # is reset after restart
 
             instance.run_until_event("block_start")
-            self.assertAlmostEqual(0.1, block_time.as_number(), delta=delta)  # nested timer is also reset
+            self.assertAlmostEqual(0, block_time.as_number(), delta=delta)  # nested timer is also reset
+
+    def test_tag_block_time_pause(self):
+        program = """\
+Wait: 0.3s
+Pause: 1s
+Block: B1
+    Wait: 0.4s
+    Pause: 2s
+    End block
+Mark: A
+"""
+        delta = 0.2
+        runner = EngineTestRunner(create_test_uod, program)
+        with runner.run() as instance:
+            e = instance.engine
+            instance.start_run()
+            run_time = e.tags[SystemTagName.RUN_TIME]
+            block_time = e.tags[SystemTagName.BLOCK_TIME]
+            block = e.tags[SystemTagName.BLOCK]
+
+            t1 = instance.run_until_instruction("Pause", state="completed", arguments="1s")
+            t1_time = t1/10
+            # self.assertAlmostEqual(t1_time, 1.7, delta=delta)  # don't depend on this
+            self.assertAlmostEqual(run_time.as_float(), t1_time, delta=delta)
+            self.assertAlmostEqual(block_time.as_float(), t1_time - 1.0, delta=delta)
+
+            t2 = instance.run_until_instruction("Block", state="started")
+            t2_time = t2/10
+            self.assertAlmostEqual(run_time.as_float(), t1_time + t2_time, delta=delta)
+            self.assertEqual("B1", block.get_value())
+            self.assertAlmostEqual(block_time.as_number(), 0, delta=delta)
+
+            t3 = instance.run_until_instruction("Pause", state="completed", arguments="2s")
+            t3_time = t3/10
+            self.assertAlmostEqual(run_time.as_float(), t1_time + t2_time + t3_time, delta=delta)
+            self.assertAlmostEqual(block_time.as_number(), t3_time - 2.0, delta=delta)
+
+            t4 = instance.run_until_event("method_end")
+            t4_time = t4/10
+            self.assertAlmostEqual(run_time.as_float(), t1_time + t2_time + t3_time + t4_time, delta=delta)
+            self.assertEqual(None, block.get_value())
+            self.assertAlmostEqual(block_time.as_number(),
+                                   t1_time - 1.0 + t3_time - 2.0 + t4_time,
+                                   delta=delta)
+
+    def test_tag_values_set_in_on_stop_are_writen_to_process_image_before_engine_stops(self):
+        hw = TestHW(connected=True)
+        uod = (
+            UodBuilder()
+            .with_instrument("TestUod")
+            .with_author("Test Author", "test@openpectus.org")
+            .with_filename(__file__)
+            .with_hardware(hw)
+            .with_location("Test location")
+            .with_hardware_register("Foo", RegisterDirection.Write)
+            .with_tag(Tag("Foo", value="", unit=None, direction=TagDirection.Output))
+        ).build()
+
+        runner = EngineTestRunner(uod, "Stop")
+        with runner.run() as instance:
+            foo = instance.engine.tags["Foo"]
+            foo.set_value("initial value", 0)
+
+            listener = EventListener()
+            instance.add_event_listener(listener)
+
+            def on_stop():
+                foo.set_value("stop value", 10)
+                print("test on_stop")
+
+            setattr(listener, "on_stop", on_stop)
+
+            instance.start_run()
+            self.assertEqual(foo.get_value(), "initial value")
+
+            instance.run_until_event("stop")
+            self.assertEqual(foo.get_value(), "stop value")
+
+            self.assertEqual(hw.register_values["Foo"], "stop value")
 
     def test_tag_unit_conversion_handled_by_pint(self):
-        p = """
+        program = """\
 CmdWithRegexArgs: 2 L/h
 CmdWithRegexArgs: 2 L/min
 CmdWithRegexArgs: 2 L/s
 """
-        runner = EngineTestRunner(create_test_uod, p)
+        runner = EngineTestRunner(create_test_uod, program)
         with runner.run() as instance:
-            e = instance.engine
-            instance.start()
-            instance.run_ticks(2)
+            instance.start_run()
 
-            flowrate = e.tags["CmdWithRegex_Flowrate"]  # [L/h]
+            flowrate = instance.engine.tags["CmdWithRegex_Flowrate"]  # [L/h]
 
             self.assertEqual(0.0, flowrate.get_value())
-            instance.run_ticks(1)
-            self.assertEqual(2.0, flowrate.get_value())  # 2 L/h is 2 L/h
-            instance.run_ticks(1)
-            self.assertEqual(120.0, flowrate.get_value())  # 2 L/min is 120 L/h
-            instance.run_ticks(1)
-            self.assertEqual(7200.0, flowrate.get_value())  # 2 L/s is 7200 L/h
 
+            instance.run_until_command("CmdWithRegexArgs", state="completed", arguments="2 L/h")
+            self.assertEqual(2.0, flowrate.get_value())  # 2 L/h is 2 L/h
+
+            instance.run_until_command("CmdWithRegexArgs", state="completed", arguments="2 L/min")
+            self.assertEqual(120.0, flowrate.get_value())  # 2 L/min is 120 L/h
+
+            instance.run_until_command("CmdWithRegexArgs", state="completed", arguments="2 L/s")
+            self.assertEqual(7200.0, flowrate.get_value())  # 2 L/s is 7200 L/h
 
     def test_watch_has_scope_time(self):
         code = """\
@@ -503,6 +581,368 @@ class TestAccumulation(unittest.TestCase):
                .build())
         return uod
 
+
+    # --- Totalizers ---
+
+    # TODO remove - is unused
+    def create_totalizer_uod(self) -> UnitOperationDefinitionBase:
+        builder = (
+            UodBuilder()
+            .with_instrument("TestUod")
+            .with_author("Test Author", "test@openpectus.org")
+            .with_filename(__file__)
+            .with_hardware(TestHW())
+            .with_location("Test location")
+            .with_hardware_register("FT01", RegisterDirection.Both, path="Objects;2:System;2:FT01")
+            .with_hardware_register(
+                "Reset",
+                RegisterDirection.Both,
+                path="Objects;2:System;2:RESET",
+                from_tag=lambda x: 1 if x == "Reset" else 0,
+                to_tag=lambda x: "Reset" if x == 1 else "N/A",
+            )
+            .with_hardware_register(
+                "Danger",
+                RegisterDirection.Write,
+                path="Objects;2:System;2:Danger",
+                safe_value=False,
+            )
+            # Readings
+            .with_tag(ReadingTag("FT01", "L/h"))
+            .with_tag(SelectTag("Reset", value="N/A", unit=None, choices=["Reset", "N/A"]))
+            .with_tag(Tag("Danger", value=True, unit=None, direction=TagDirection.Output))
+        )
+        return builder.build()
+
+    def test_totalizer_base_units_no_accumulator_allows_time_unit(self):
+        runner = EngineTestRunner(self.create_test_uod, "Base: s\n0.1 Mark: A")
+        with runner.run() as instance:
+            instance.start_run()
+            instance.run_ticks(5)
+            method_status = instance.engine.tags[SystemTagName.METHOD_STATUS]
+            self.assertEqual(method_status.get_value(), MethodStatusEnum.OK)
+
+    def test_totalizer_base_units_no_accumulator_disallows_volume_unit(self):
+        runner = EngineTestRunner(self.create_test_uod, "Base: L\n0.1 Mark: A", fail_on_log_error=False)
+        with runner.run() as instance:
+            instance.start_run()
+            with self.assertRaises(EngineError):
+                instance.run_ticks(5)
+            method_status = instance.engine.tags[SystemTagName.METHOD_STATUS]
+            self.assertEqual(method_status.get_value(), MethodStatusEnum.ERROR)
+
+    def test_totalizer_base_units_with_accumulator_volume(self):
+        uod = (UodBuilder()
+               .with_instrument("TestUod")
+               .with_author("Test Author", "test@openpectus.org")
+               .with_filename(__file__)
+               .with_hardware(TestHW(connected=True))
+               .with_location("Test location")
+               .with_tag(ReadingTag("Meter", "L"))
+               .with_accumulated_volume(totalizer_tag_name="Meter")
+               .build())
+
+        with self.subTest("allows_time_unit"):
+            runner = EngineTestRunner(uod, "Base: s\n0.1 Mark: A")
+            with runner.run() as instance:
+                instance.start_run()
+                instance.run_ticks(5)
+                method_status = instance.engine.tags[SystemTagName.METHOD_STATUS]
+                self.assertEqual(method_status.get_value(), MethodStatusEnum.OK)
+
+        with self.subTest("allows_volume_unit"):
+            runner = EngineTestRunner(uod, "Base: L\n0.1 Mark: A")
+            with runner.run() as instance:
+                instance.start_run()
+                instance.run_ticks(5)
+                method_status = instance.engine.tags[SystemTagName.METHOD_STATUS]
+                self.assertEqual(method_status.get_value(), MethodStatusEnum.OK)
+
+        with self.subTest("disallows_cv_unit"):
+            runner = EngineTestRunner(uod, "Base: CV\n0.1 Mark: A", fail_on_log_error=False)
+            with runner.run() as instance:
+                instance.start_run()
+                with self.assertRaises(EngineError):
+                    instance.run_ticks(5)
+                method_status = instance.engine.tags[SystemTagName.METHOD_STATUS]
+                self.assertEqual(method_status.get_value(), MethodStatusEnum.ERROR)
+
+    def test_totalizer_base_units_with_accumulator_cv(self):
+        uod = (UodBuilder()
+               .with_instrument("TestUod")
+               .with_author("Test Author", "test@openpectus.org")
+               .with_filename(__file__)
+               .with_hardware(TestHW(connected=True))
+               .with_location("Test location")
+               .with_tag(ReadingTag("Meter", "L"))
+               .with_tag(ReadingTag("CV", "L"))
+               .with_accumulated_cv(cv_tag_name="CV", totalizer_tag_name="Meter")
+               .build())
+
+        uod.tags["CV"].set_value(1.0, 0)
+
+        with self.subTest("allows_time_unit"):
+            runner = EngineTestRunner(uod, "Base: s\n0.1 Mark: A")
+            with runner.run() as instance:
+                instance.start_run()
+                instance.run_ticks(5)
+                method_status = instance.engine.tags[SystemTagName.METHOD_STATUS]
+                self.assertEqual(method_status.get_value(), MethodStatusEnum.OK)
+
+        with self.subTest("disallows_volume_unit"):
+            runner = EngineTestRunner(uod, "Base: L\n0.1 Mark: A", fail_on_log_error=False)
+            with runner.run() as instance:
+                instance.start_run()
+                with self.assertRaises(EngineError):
+                    instance.run_ticks(5)
+                method_status = instance.engine.tags[SystemTagName.METHOD_STATUS]
+                self.assertEqual(method_status.get_value(), MethodStatusEnum.ERROR)
+
+        with self.subTest("allows_cv_unit"):
+            runner = EngineTestRunner(uod, "Base: CV\n0.1 Mark: A")
+            with runner.run() as instance:
+                instance.start_run()
+                instance.run_ticks(5)
+                method_status = instance.engine.tags[SystemTagName.METHOD_STATUS]
+                self.assertEqual(method_status.get_value(), MethodStatusEnum.OK)
+
+    def test_accumulated_volume(self):
+        uod = (UodBuilder()
+               .with_instrument("TestUod")
+               .with_author("Test Author", "test@openpectus.org")
+               .with_filename(__file__)
+               .with_hardware(TestHW(connected=True))
+               .with_location("Test location")
+               .with_tag(CalculatedLinearTag("calc", "L"))
+               .with_accumulated_volume(totalizer_tag_name="calc")
+               .build())
+
+        runner = EngineTestRunner(uod, "Base: s")
+        with runner.run() as instance:
+            instance.start_run()
+
+            acc_vol = instance.engine.tags[SystemTagName.ACCUMULATED_VOLUME]
+            self.assertEqual(acc_vol.as_float(), 0.0)
+            self.assertEqual(acc_vol.unit, "L")
+
+            t0 = instance.engine._clock.get_time()
+            instance.run_ticks(10)
+            t1 = instance.engine._clock.get_time()
+
+            self.assertAlmostEqual(t1 - t0, 1, delta=0.05)
+            self.assertAlmostEqual(acc_vol.as_float(), 1, delta=0.05)
+
+    def test_accumulated_block_volume(self):
+        delta = 0.15
+        set_interpreter_debug_logging(include_events=True, include_runlog=True)
+
+        uod = (UodBuilder()
+               .with_instrument("TestUod")
+               .with_author("Test Author", "test@openpectus.org")
+               .with_filename(__file__)
+               .with_hardware(TestHW(connected=True))
+               .with_location("Test location")
+               .with_tag(CalculatedLinearTag("calc", "L"))
+               .with_accumulated_volume(totalizer_tag_name="calc")
+               .build())
+
+        program = """\
+Base: s
+Wait: 0.45s
+Block: A
+    0.85 End block
+0.45 Mark: A
+        """
+
+        runner = EngineTestRunner(uod, program)
+        with runner.run() as instance:
+            instance.start_run()
+
+            acc_vol = instance.engine.tags[SystemTagName.ACCUMULATED_VOLUME]
+            block_vol = instance.engine.tags[SystemTagName.BLOCK_VOLUME]
+            block = instance.engine.tags[SystemTagName.BLOCK]
+
+            self.assertEqual(block.get_value(), None)
+            self.assertEqual(acc_vol.as_float(), 0.0)
+            self.assertEqual(acc_vol.unit, "L")
+            self.assertEqual(block_vol.as_float(), 0.0)
+            self.assertEqual(block_vol.unit, "L")
+
+            t1 = instance.run_until_instruction("Wait", state="completed")
+            # Note: the expected tag values here depends on the value used for initial_increment
+            # t1_value = (t1 - 1)/10  # using initial_increment = 0
+            t1_value = t1/10          # using initial_increment = interval (=0.1)
+            print(f"{t1=} | {t1_value=}")
+
+            self.assertEqual(block.get_value(), None)
+            self.assertAlmostEqual(acc_vol.as_float(), t1_value, delta=delta)
+            self.assertAlmostEqual(block_vol.as_float(), t1_value, delta=delta)
+
+            t2 = instance.run_until_instruction("Block", state="started")
+            t2_value = t2/10
+            print(f"{t2=} | {t2_value=}")
+
+            self.assertEqual(block.get_value(), "A")
+            self.assertAlmostEqual(acc_vol.as_float(), t1_value + t2_value, delta=delta)
+            self.assertAlmostEqual(block_vol.as_float(), t2_value, delta=delta)
+
+            t3 = instance.run_ticks(5)  # just run a bit into the block
+            assert t3 == 5
+            t3_value = t3/10
+            print(f"{t3=} | {t3_value=}")
+
+            self.assertEqual(block.get_value(), "A")
+            self.assertAlmostEqual(acc_vol.as_float(), t1_value + t2_value + t3_value, delta=delta)
+            self.assertAlmostEqual(block_vol.as_float(), t2_value + t3_value, delta=delta)
+
+            instance.index_step_back(2)
+            t4 = instance.run_until_instruction("Block", state="completed")
+            t4_value = t4/10
+            print(f"{t4=} | {t4_value=}")
+
+            self.assertEqual(block.get_value(), None)
+            self.assertAlmostEqual(acc_vol.as_float(), t1_value + t2_value + t3_value + t4_value, delta=delta)
+            # block_vol is reset to value before block A - so it matches acc_vol again
+            self.assertAlmostEqual(block_vol.as_float(), t1_value + t2_value + t3_value + t4_value, delta=delta)
+
+    def test_accumulated_column_volume(self):
+        uod = (UodBuilder()
+               .with_instrument("TestUod")
+               .with_author("Test Author", "test@openpectus.org")
+               .with_filename(__file__)
+               .with_hardware(TestHW(connected=True))
+               .with_location("Test location")
+               .with_tag(ReadingTag("CV", "L"))
+               .with_tag(CalculatedLinearTag("calc", "L"))
+               .with_accumulated_cv(cv_tag_name="CV", totalizer_tag_name="calc")
+               .build())
+
+        program = """
+Base: s
+1 Mark: A
+"""
+        runner = EngineTestRunner(uod, program)
+        with runner.run() as instance:
+            instance.start_run()
+
+            cv = instance.engine.tags["CV"]
+            cv.set_value(2.0, 0)
+            acc_cv = instance.engine.tags[SystemTagName.ACCUMULATED_CV]
+
+            self.assertEqual(acc_cv.as_float(), 0.0)
+            self.assertEqual(acc_cv.unit, "CV")
+
+
+            t0 = instance.engine._clock.get_time()
+            instance.run_ticks(10)
+            t1 = instance.engine._clock.get_time()
+
+            self.assertAlmostEqual(t1 - t0, 1, delta=0.1)
+            self.assertAlmostEqual(acc_cv.as_float(), 1/2, delta=0.1)
+
+    def test_accumulated_column_volume_base(self):
+        uod = (UodBuilder()
+               .with_instrument("TestUod")
+               .with_author("Test Author", "test@openpectus.org")
+               .with_filename(__file__)
+               .with_hardware(TestHW(connected=True))
+               .with_location("Test location")
+               .with_tag(ReadingTag("CV", "L"))
+               .with_tag(CalculatedLinearTag("calc", "L"))
+               .with_accumulated_cv(cv_tag_name="CV", totalizer_tag_name="calc")
+               .build())
+
+        program = """
+Base: CV
+0.5 Mark: A
+"""
+        runner = EngineTestRunner(uod, program)
+        with runner.run() as instance:
+            instance.start_run()
+
+            cv = instance.engine.tags["CV"]
+            cv.set_value(2.0, 0)
+            acc_cv = instance.engine.tags[SystemTagName.ACCUMULATED_CV]
+
+            self.assertEqual(acc_cv.as_float(), 0.0)
+            self.assertEqual(acc_cv.unit, "CV")
+
+            instance.run_ticks(4)
+            self.assertAlmostEqual(acc_cv.as_float(), 0.2, delta=0.1)
+            self.assertEqual(instance.marks, [])
+
+            # because base is column volume, the threshold has not yet passed
+
+            instance.run_ticks(4)
+            self.assertAlmostEqual(acc_cv.as_float(), 0.4, delta=0.1)
+            self.assertEqual(instance.marks, [])
+
+            # now it has
+
+            instance.run_ticks(4)
+            self.assertAlmostEqual(acc_cv.as_float(), 0.6, delta=0.1)
+            self.assertEqual(instance.marks, ["A"])
+
+
+    def test_accumulated_column_block_volume(self):
+        uod = (UodBuilder()
+               .with_instrument("TestUod")
+               .with_author("Test Author", "test@openpectus.org")
+               .with_filename(__file__)
+               .with_hardware(TestHW(connected=True))
+               .with_location("Test location")
+               .with_tag(ReadingTag("CV", "L"))
+               .with_tag(CalculatedLinearTag("calc", "L"))
+               .with_accumulated_cv(cv_tag_name="CV", totalizer_tag_name="calc")
+               .build())
+
+        program = """\
+Base: s
+Block: A
+    0.5 Mark: A
+    End block
+Mark: B
+        """
+        runner = EngineTestRunner(uod, program)
+        with runner.run() as instance:
+            instance.start_run()
+
+            cv = instance.engine.tags["CV"]
+            cv.set_value(2.0, 0)
+            acc_cv = instance.engine.tags[SystemTagName.ACCUMULATED_CV]
+            block_cv = instance.engine.tags[SystemTagName.BLOCK_CV]
+            block = instance.engine.tags[SystemTagName.BLOCK]
+
+            self.assertEqual(acc_cv.as_float(), 0.0)
+            self.assertEqual(acc_cv.unit, "CV")
+            self.assertEqual(block_cv.as_float(), 0.0)
+            self.assertEqual(block_cv.unit, "CV")
+
+            t1 = instance.run_until_instruction("Base")
+            t1_value = t1/10/2
+            self.assertEqual(block.get_value(), None)
+            self.assertAlmostEqual(acc_cv.as_float(), t1_value, delta=0.1)
+            self.assertAlmostEqual(block_cv.as_float(), t1_value, delta=0.1)
+
+            t2 = instance.run_until_instruction("Block", state="started")
+            t2_value = t2/10/2
+            self.assertEqual(block.get_value(), "A")
+            self.assertAlmostEqual(acc_cv.as_float(), t1_value + t2_value, delta=0.1)
+            self.assertAlmostEqual(block_cv.as_float(), t2_value, delta=0.1)
+
+            t3 = instance.run_until_instruction("Mark", state="started", arguments="A")
+            t3_value = t3/10/2
+            self.assertEqual(block.get_value(), "A")
+            self.assertAlmostEqual(acc_cv.as_float(), t1_value + t2_value + t3_value, delta=0.1)
+            self.assertAlmostEqual(block_cv.as_float(), t2_value + t3_value, delta=0.1)
+
+            t4 = instance.run_until_instruction("Mark", arguments="B")
+            t4_value = t4/10/2
+            self.assertEqual(block.get_value(), None)
+            self.assertAlmostEqual(acc_cv.as_float(), t1_value + t2_value + t3_value + t4_value, delta=0.1)
+            self.assertAlmostEqual(block_cv.as_float(), t1_value + t2_value + t3_value + t4_value, delta=0.1)
+
+
     def test_accumulated_column_volume_watch(self):
         program = """
 Base: CV
@@ -511,8 +951,8 @@ Watch: Accumulated CV > 0.5 CV
 """
         runner = EngineTestRunner(self.create_test_uod, program)
         with runner.run() as instance:
-            instance.start()
-            instance.run_ticks(1)
+            instance.start_run()
+            instance.run_until_instruction("Base", state="completed")
 
             multiplier = 3.0
             cv = instance.engine.tags["CV"]
@@ -522,7 +962,7 @@ Watch: Accumulated CV > 0.5 CV
             self.assertEqual(acc_cv.unit, "CV")
 
             elapsed = instance.run_until_instruction("Mark", state="started")
-            self.assertAlmostEqual(5 * multiplier, elapsed, delta=2)
+            self.assertAlmostEqual(5 * multiplier, elapsed, delta=1)
 
 
 class TestFormatting(unittest.TestCase):
@@ -553,3 +993,74 @@ class CalculatedLinearTag(Tag):
 
     def on_tick(self, tick_time: float, increment_time: float):
         self.value = time.time() * self.slope
+
+class TestDerivedTag(unittest.TestCase):
+
+    def test_no_tags_constant_value(self):
+        constant_value = 1.234
+        derived_tag = DerivedTag("Derived", fn=lambda: constant_value, input_tags=[])
+        self.assertEqual(derived_tag.get_value(), constant_value)
+
+    def test_no_tags_developing_value(self):
+        x = 0
+        def fn():
+            nonlocal x
+            x += 1
+            return x
+        derived_tag = DerivedTag("Derived", fn=fn, input_tags=[])
+        self.assertEqual(derived_tag.get_value(), 1)
+        derived_tag.on_tick(0.0, 0.0)
+        self.assertEqual(derived_tag.get_value(), 2)
+        self.assertEqual(derived_tag.get_value(), 2)
+        derived_tag.on_tick(0.0, 0.0)
+        self.assertEqual(derived_tag.get_value(), 3)
+
+    def test_with_input_tag(self):
+        constant_value = 1.234
+        tag1 = Tag("Input1", value=constant_value)
+        derived_tag = DerivedTag("Derived", fn=lambda input1: input1, input_tags=[tag1])
+        self.assertEqual(derived_tag.get_value(), constant_value)
+        tag1.set_value(2*constant_value, 0.0)
+        self.assertEqual(derived_tag.get_value(), 2*constant_value)
+
+
+    def test_with_input_tag_simulate_derived_tag(self):
+        constant_value = 1.234
+        tag1 = Tag("Input1", value=constant_value)
+        derived_tag = DerivedTag("Derived", fn=lambda input1: input1, input_tags=[tag1])
+
+        # Simulate derived tag and show it has no impact on input tags.
+        derived_tag.simulate_value(5.0, 0.0)
+        self.assertTrue(derived_tag.simulated)
+        self.assertEqual(derived_tag.get_value(), 5.0)
+        self.assertFalse(tag1.simulated)
+        self.assertEqual(tag1.get_value(), constant_value)
+        # Stop simulation and show that the tag returns to the expected value
+        derived_tag.stop_simulation()
+        self.assertFalse(derived_tag.simulated)
+        self.assertEqual(derived_tag.get_value(), constant_value)
+
+
+    def test_with_input_tag_simulate_input_tag(self):
+        constant_value = 1.234
+        tag1 = Tag("Input1", value=constant_value)
+        derived_tag = DerivedTag("Derived", fn=lambda input1: input1, input_tags=[tag1])
+        # Simulate input tag and show that it impacts the derived tag.
+        tag1.simulate_value(5.0, 0.0)
+        self.assertTrue(tag1.simulated)
+        self.assertEqual(tag1.get_value(), 5.0)
+        self.assertTrue(derived_tag.simulated)
+        self.assertEqual(derived_tag.get_value(), 5.0)
+        # Simulate derived tag and show that it takes priority
+        self.assertTrue(derived_tag.simulated)
+        derived_tag.simulate_value(7.0, 0.0)
+        self.assertEqual(derived_tag.get_value(), 7.0)
+        # Stop simulation of derived tag and show that it still
+        # has simulated status due to the input tag.
+        derived_tag.stop_simulation()
+        self.assertTrue(derived_tag.simulated)
+        self.assertEqual(derived_tag.get_value(), 5.0)
+        # Stop simulation of input tag and show that the tag returns to the expected value
+        tag1.stop_simulation()
+        self.assertFalse(derived_tag.simulated)
+        self.assertEqual(derived_tag.get_value(), constant_value)

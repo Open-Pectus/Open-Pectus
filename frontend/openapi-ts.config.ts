@@ -7,6 +7,7 @@ export default defineConfig({
     ...defaultPlugins,
     {
       asClass: true,
+      classNameBuilder: '{{name}}Service',
       name: '@hey-api/sdk',
     },
     'legacy/angular',

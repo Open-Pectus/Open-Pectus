@@ -24,6 +24,9 @@ class TestRegexs_named_groups(unittest.TestCase):
         # multiple units
         parser = RegexNamedArgumentParser(RegexNumber(units=["kg", "g", "m2"]))
         self.assertEqual(["kg", "g", "m2"], parser.get_units())
+        # unit with parenthesis
+        parser = RegexNamedArgumentParser(RegexNumber(units=["(L/h)/%"]))
+        self.assertEqual(["(L/h)/%"], parser.get_units())
 
     def test_named_groups_RegexText(self):
         parser = RegexNamedArgumentParser(RegexText())

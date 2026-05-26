@@ -1,8 +1,9 @@
 from __future__ import annotations
 import logging
 import time
+from typing import Callable
 
-from openpectus.lang.exec.tags import SystemTagName, Tag, TagDirection, TagFormatFunction, format_time_as_clock
+from openpectus.lang.exec.tags import SystemTagName, Tag, TagDirection, TagFormatFunction, format_time_as_clock, TagValueType, ChangeListener
 from openpectus.lang.exec.events import BlockInfo, RunStateChange
 from openpectus.lang.exec.tracer import Tracer
 
@@ -75,24 +76,22 @@ class AccumulatorTag(Tag):
         self.totalizer: Tag = totalizer
         self.unit = self.totalizer.unit
         self.v0: float | None = None
+        self.value = 0.0
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(name="{self.name}", value="{self.value}", v0={self.v0})'
 
     def reset(self):
         self.v0 = self.totalizer.as_float()
-        self.value = 0.0
         assert self.v0 is not None
+        self.set_value(0.0, time.time())
 
     def on_start(self, run_id: str):
         self.reset()
 
     def on_tick(self, tick_time: float, increment_time: float):
         assert self.v0 is not None, f"Error in aggregator tag '{self.name}', v0 was not set."
-        try:
-            self.value = self.totalizer.as_float() - self.v0
-        except ValueError:
-            self.value = 0.0
+        self.set_value(self.totalizer.as_float() - self.v0, tick_time)
 
 
 class BlockTimeTag(Tag):
@@ -114,7 +113,6 @@ class BlockTimeTag(Tag):
     def on_start(self, run_id):
         self.value = 0.0
         self._stack.clear()
-        self._stack.append(BlockTimeTag.StackItem("root"))
         self.tracer.trace()
 
     def on_block_start(self, block_info):
@@ -131,7 +129,7 @@ class BlockTimeTag(Tag):
         for item in self._stack:
             item.value += increment_time
         self.value = self.get_value()
-        # self.tracer.trace(f"{self.value=}")
+        self.tracer.trace(f"value: {self.value}")
 
     def on_runstate_change(self, state_change):
         if state_change == RunStateChange.PAUSE:
@@ -171,6 +169,7 @@ class ScopeTimeTag(Tag):
     def on_scope_end(self, scope_info):
         del self._timers[scope_info.node_id]
         self._stack.pop()
+        self.tracer.trace()
 
     def on_tick(self, tick_time, increment_time):
         if self._paused:
@@ -178,7 +177,7 @@ class ScopeTimeTag(Tag):
         for key in self._timers.keys():
             self._timers[key] += increment_time
         self.value = self.get_value()
-        self.tracer.trace(f"{self.value}")
+        self.tracer.trace(f"value: {self.value}")
 
     def on_runstate_change(self, state_change):
         if state_change == RunStateChange.PAUSE:
@@ -221,7 +220,7 @@ class AccumulatorBlockTag(Tag):
             acc.on_tick(tick_time, increment_time)
 
         # apply the current value
-        self.value = self.cur_accumulator.get_value()
+        super().set_value(self.cur_accumulator.get_value(), tick_time)
 
     def on_block_start(self, block_info: BlockInfo):
         self.cur_block = block_info
@@ -248,8 +247,8 @@ class AccumulatedColumnVolume(Tag):
 
     def reset(self):
         self.v0 = self.totalizer.as_float()
-        self.value = 0.0
         assert self.v0 is not None
+        super().set_value(0.0, time.time())
 
     def on_start(self, run_id: str):
         self.reset()
@@ -257,7 +256,97 @@ class AccumulatedColumnVolume(Tag):
     def on_tick(self, tick_time: float, increment_time: float):
         cv = self.column_volume.as_float()
         v = self.totalizer.as_float()
-        if cv == 0.0:
-            self.value = None
+        value = 0.0
+        if cv > 0.0:
+            value = (v-self.v0) / cv
+        super().set_value(value, tick_time)
+
+class DerivedTag(Tag, ChangeListener):
+    """Tag with value derived from other tags using a function.
+       Tag has simulated status if any tags used for calculation
+       are simulated, or if the tag is simulated on its own.
+       Calculation is performed when an input tag changes value.
+       If there are no input tags, then the tag value is updated
+       on every tick.
+
+       The provided function is called with tag values as argument
+       in the order they appear in the list of input tags.
+    """
+    def __init__(self,
+                 name,
+                 fn: Callable[..., TagValueType],
+                 input_tags: list[Tag],
+                 calculate_on_tick: None | bool = None,
+                 tick_time=None,
+                 value=None,
+                 unit=None,
+                 direction=TagDirection.NA,
+                 format_fn=None):
+        super().__init__(name, tick_time, value, unit, direction, format_fn)
+        self._fn = fn
+        self._input_tags = input_tags
+        self._simulated_directly = False
+        self._calculate_on_tick = calculate_on_tick or (calculate_on_tick is None and len(input_tags) == 0)
+
+        # Listen to tag changes from input tags
+        [tag.add_listener(self) for tag in input_tags]
+
+        self._set_calculated_value()
+
+    def calculate(self) -> TagValueType:
+        input_tag_values = [tag.get_value() for tag in self._input_tags]
+        try:
+            return self._fn(*input_tag_values)
+        except Exception as e:
+            logger.error(f"Calculation of tag '{self.name}' with function " +
+                         f"'{self._fn.__name__}' called with arguments " +
+                         f"{input_tag_values} failed with exception {e}.")
+
+    def _set_calculated_value(self):
+        calculated_value = self.calculate()
+        self.set_value(calculated_value, time.time())
+        if self.input_tag_simulated:
+            self.simulate_value(calculated_value, time.time(), _internal_call=True)
         else:
-            self.value = (v-self.v0) / cv
+            self.stop_simulation(_internal_call=True)
+
+    def on_tick(self, tick_time: float, increment_time: float):
+        if self._calculate_on_tick:
+            self._set_calculated_value()
+
+    def notify_change(self, elm):
+        """Calculate value in response to new input_tag values."""
+        self._set_calculated_value()
+
+    def clear_changes(self):
+        raise NotImplementedError
+
+    @property
+    def changes(self):
+        raise NotImplementedError
+
+    @property
+    def input_tag_simulated(self):
+        return any(tag.simulated for tag in self._input_tags)
+
+    def simulate_value(self, val, tick_time, _internal_call: bool = False):
+        """The DerivedTag can attain simulated status by two means:
+           1) An input tag is simulated
+           2) The DerivedTag itself is simulated
+
+           Simulation of the DerivedTag itself takes priority."""
+        if not _internal_call:
+            self._simulated_directly = True
+        elif _internal_call and self._simulated_directly:
+            return
+        super().simulate_value(val, tick_time)
+
+    def stop_simulation(self, _internal_call: bool = False):
+        if not _internal_call:
+            self._simulated_directly = False
+            if self.input_tag_simulated:
+                self.simulate_value(self.value, time.time(), _internal_call=True)
+            else:
+                super().stop_simulation()
+        elif _internal_call and not self._simulated_directly:
+            super().stop_simulation()

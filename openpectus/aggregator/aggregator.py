@@ -3,6 +3,7 @@ import copy
 import logging
 import time
 from datetime import datetime, timezone, UTC
+from urllib.parse import quote
 
 import openpectus.aggregator.models as Mdl
 import openpectus.protocol.aggregator_messages as AM
@@ -180,7 +181,7 @@ class FromEngine:
         except KeyError:
             logger.error(f'No engine registered under id {engine_id} when trying to set uod info.')
 
-    def tag_values_changed(self, engine_id: str, changed_tag_values: list[Mdl.TagValue], msg_run_id : str | None):
+    def tag_values_changed(self, engine_id: str, changed_tag_values: list[Mdl.TagValue], msg_run_id: str | None):
         with database.create_scope():
             plot_log_repo = PlotLogRepository(database.scoped_session())
 
@@ -235,7 +236,7 @@ class FromEngine:
         tag_values = engine_data.tags_info.map.values()
         latest_tag_tick_time = max([tag.tick_time for tag in tag_values]) if len(tag_values) > 0 else 0
         time_threshold_exceeded = latest_persisted_tick_time is None \
-            or latest_tag_tick_time - latest_persisted_tick_time > engine_data.data_log_interval_seconds
+                                  or latest_tag_tick_time - latest_persisted_tick_time > engine_data.data_log_interval_seconds
 
         if engine_data.run_data.run_id is not None and time_threshold_exceeded:
             tag_values_to_persist = [tag_value.model_copy() for tag_value in engine_data.tags_info.map.values()
@@ -561,7 +562,7 @@ class Aggregator:
         - historical data; we should not corrupt historical data by accidentially reusing engine_id
         - number of cards shown; we should not show many irrelevant cards in frontend of superseeded engine_ids
         """
-        return register_engine_msg.computer_name + "_" + register_engine_msg.uod_name
+        return quote(register_engine_msg.computer_name + "_" + register_engine_msg.uod_name, "")
 
     def get_registered_engine_data(self, engine_id: str):
         return self._engine_data_map.get(engine_id)

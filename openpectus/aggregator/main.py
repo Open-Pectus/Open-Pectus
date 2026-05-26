@@ -14,6 +14,7 @@ logger = logging.getLogger("openpectus.aggregator.aggregator")
 logger.setLevel(logging.INFO)
 logging.getLogger("openpectus.protocol.aggregator_dispatcher").setLevel(logging.INFO)
 logging.getLogger("openpectus.aggregator.routers.webpush").setLevel(logging.DEBUG)
+logging.getLogger("pylsp_jsonrpc.endpoint").setLevel(logging.ERROR)  # Noisy library not contributing useful information
 
 
 def get_arg_parser():
