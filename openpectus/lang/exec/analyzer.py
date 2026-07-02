@@ -130,14 +130,16 @@ class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
                 if isinstance(child, (p.EndBlockNode, p.EndBlocksNode)):
                     has_end = True
                     continue
-                if has_end and not isinstance(child, p.BlankNode):
+                if has_end and not isinstance(child, (p.BlankNode, p.CommentNode)):
                     self.add_item(self.create_item(child))
         yield from super().visit_BlockNode(node)
 
     def visit_EngineCommandNode(self, node: p.EngineCommandNode) -> NodeGenerator:
         yield from super().visit_EngineCommandNode(node)
         if not self.method_end and node.instruction_name in ["Stop", "Restart"]:
-            self.method_end = node
+            if not isinstance(node.parent, (p.NodeWithTagOperatorValue, p.BlockNode)):
+                self.method_end = node
+        yield VisitResult.EndTick
 
     def visit_Node(self, node) -> NodeGenerator:
         yield from super().visit_Node(node)
@@ -812,6 +814,9 @@ class CommandCheckAnalyzer(AnalyzerVisitorBase):
 
     def check_command_node(self, node: p.Node):
         name = node.instruction_name
+        # ErrorInstructionNode has no name. Adopt entire line as name.
+        if name == "" and isinstance(node, p.ErrorInstructionNode):
+            name = node.line
 
         if not self.commands.has(name):
             if len(name) > 2 and self.commands.names:

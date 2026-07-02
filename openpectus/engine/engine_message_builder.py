@@ -129,11 +129,11 @@ class EngineMessageBuilder():
     def create_run_stopped_msg(self, run_id: str) -> EM.RunStoppedMsg:
         runlog_msg = self.create_runlog_msg(run_id)
         state = self.engine.method_manager.get_method_state()
-        archiver = self.engine._system_tags.get_value_or_default(SystemTagName.ARCHIVER)
-        if archiver is None:  # if archiver is disabled
+        if not self.engine._system_tags.has(SystemTagName.ARCHIVER):  # if archiver is disabled
             archive = None
             archive_filename = None
         else:
+            archiver = self.engine._system_tags.get(SystemTagName.ARCHIVER)
             assert isinstance(archiver, ArchiverTag)
             archive = archiver.read_last_run_archive(run_id)
             assert archiver.last_run_file_path is not None

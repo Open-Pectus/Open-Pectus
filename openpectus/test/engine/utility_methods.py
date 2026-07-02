@@ -139,7 +139,7 @@ class EngineTestInstance(EventListener):
 
         self._search_index = 0
         # register as listener for lifetime events, so these events can be awaited in the tests
-        self.engine.emitter.add_listener(self)
+        self.add_event_listener(self)
         self._last_event: EventName | None = None
         self._scopes: list[ScopeInfo] = []
         self._scope_history: list[ScopeInfo] = []
@@ -155,6 +155,9 @@ class EngineTestInstance(EventListener):
         self.start()
         self.run_ticks(1)
         assert self.engine._tick_number == 0
+
+    def add_event_listener(self, listener: EventListener):
+        self.engine.emitter.add_listener(listener)
 
     @property
     def marks(self) -> list[str]:

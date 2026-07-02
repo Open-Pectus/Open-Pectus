@@ -6,8 +6,9 @@ from typing import Any
 
 from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum
 from openpectus.lang.exec.errors import EngineError
+from openpectus.lang.exec.events import EventListener
 from openpectus.lang.exec.regex import RegexNumber
-from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag
+from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag, DerivedTag
 from openpectus.engine.hardware import RegisterDirection
 
 import pint
@@ -278,7 +279,6 @@ Wait: 1s
 
             t1 = instance.run_until_instruction("Block", state="started", arguments="A")
             t1_time = t1/10
-            #instance.logger.info(f"Block: {block.get_value()} | Block time: {block_time.as_float():.2f}")
             self.assertEqual("A", block.get_value())
             self.assertAlmostEqual(0, block_time.as_number(), delta=delta)
 
@@ -294,7 +294,7 @@ Wait: 1s
 
             self.assertEqual("A", block.get_value())
             self.assertAlmostEqual(t2_time + t3_time, block_time.as_number(), delta=delta)
-            
+
             instance.index_step_back(5)  # search even further back to Block: A
             t4 = instance.run_until_instruction("Block", state="completed", arguments="A")
             t4_time = t4/10
@@ -433,6 +433,41 @@ Mark: A
             self.assertAlmostEqual(block_time.as_number(),
                                    t1_time - 1.0 + t3_time - 2.0 + t4_time,
                                    delta=delta)
+
+    def test_tag_values_set_in_on_stop_are_writen_to_process_image_before_engine_stops(self):
+        hw = TestHW(connected=True)
+        uod = (
+            UodBuilder()
+            .with_instrument("TestUod")
+            .with_author("Test Author", "test@openpectus.org")
+            .with_filename(__file__)
+            .with_hardware(hw)
+            .with_location("Test location")
+            .with_hardware_register("Foo", RegisterDirection.Write)
+            .with_tag(Tag("Foo", value="", unit=None, direction=TagDirection.Output))
+        ).build()
+
+        runner = EngineTestRunner(uod, "Stop")
+        with runner.run() as instance:
+            foo = instance.engine.tags["Foo"]
+            foo.set_value("initial value", 0)
+
+            listener = EventListener()
+            instance.add_event_listener(listener)
+
+            def on_stop():
+                foo.set_value("stop value", 10)
+                print("test on_stop")
+
+            setattr(listener, "on_stop", on_stop)
+
+            instance.start_run()
+            self.assertEqual(foo.get_value(), "initial value")
+
+            instance.run_until_event("stop")
+            self.assertEqual(foo.get_value(), "stop value")
+
+            self.assertEqual(hw.register_values["Foo"], "stop value")
 
     def test_tag_unit_conversion_handled_by_pint(self):
         program = """\
@@ -850,8 +885,6 @@ Base: CV
 
 
     def test_accumulated_column_block_volume(self):
-        # TODO flaky - still??        
-
         uod = (UodBuilder()
                .with_instrument("TestUod")
                .with_author("Test Author", "test@openpectus.org")
@@ -960,3 +993,74 @@ class CalculatedLinearTag(Tag):
 
     def on_tick(self, tick_time: float, increment_time: float):
         self.value = time.time() * self.slope
+
+class TestDerivedTag(unittest.TestCase):
+
+    def test_no_tags_constant_value(self):
+        constant_value = 1.234
+        derived_tag = DerivedTag("Derived", fn=lambda: constant_value, input_tags=[])
+        self.assertEqual(derived_tag.get_value(), constant_value)
+
+    def test_no_tags_developing_value(self):
+        x = 0
+        def fn():
+            nonlocal x
+            x += 1
+            return x
+        derived_tag = DerivedTag("Derived", fn=fn, input_tags=[])
+        self.assertEqual(derived_tag.get_value(), 1)
+        derived_tag.on_tick(0.0, 0.0)
+        self.assertEqual(derived_tag.get_value(), 2)
+        self.assertEqual(derived_tag.get_value(), 2)
+        derived_tag.on_tick(0.0, 0.0)
+        self.assertEqual(derived_tag.get_value(), 3)
+
+    def test_with_input_tag(self):
+        constant_value = 1.234
+        tag1 = Tag("Input1", value=constant_value)
+        derived_tag = DerivedTag("Derived", fn=lambda input1: input1, input_tags=[tag1])
+        self.assertEqual(derived_tag.get_value(), constant_value)
+        tag1.set_value(2*constant_value, 0.0)
+        self.assertEqual(derived_tag.get_value(), 2*constant_value)
+
+
+    def test_with_input_tag_simulate_derived_tag(self):
+        constant_value = 1.234
+        tag1 = Tag("Input1", value=constant_value)
+        derived_tag = DerivedTag("Derived", fn=lambda input1: input1, input_tags=[tag1])
+
+        # Simulate derived tag and show it has no impact on input tags.
+        derived_tag.simulate_value(5.0, 0.0)
+        self.assertTrue(derived_tag.simulated)
+        self.assertEqual(derived_tag.get_value(), 5.0)
+        self.assertFalse(tag1.simulated)
+        self.assertEqual(tag1.get_value(), constant_value)
+        # Stop simulation and show that the tag returns to the expected value
+        derived_tag.stop_simulation()
+        self.assertFalse(derived_tag.simulated)
+        self.assertEqual(derived_tag.get_value(), constant_value)
+
+
+    def test_with_input_tag_simulate_input_tag(self):
+        constant_value = 1.234
+        tag1 = Tag("Input1", value=constant_value)
+        derived_tag = DerivedTag("Derived", fn=lambda input1: input1, input_tags=[tag1])
+        # Simulate input tag and show that it impacts the derived tag.
+        tag1.simulate_value(5.0, 0.0)
+        self.assertTrue(tag1.simulated)
+        self.assertEqual(tag1.get_value(), 5.0)
+        self.assertTrue(derived_tag.simulated)
+        self.assertEqual(derived_tag.get_value(), 5.0)
+        # Simulate derived tag and show that it takes priority
+        self.assertTrue(derived_tag.simulated)
+        derived_tag.simulate_value(7.0, 0.0)
+        self.assertEqual(derived_tag.get_value(), 7.0)
+        # Stop simulation of derived tag and show that it still
+        # has simulated status due to the input tag.
+        derived_tag.stop_simulation()
+        self.assertTrue(derived_tag.simulated)
+        self.assertEqual(derived_tag.get_value(), 5.0)
+        # Stop simulation of input tag and show that the tag returns to the expected value
+        tag1.stop_simulation()
+        self.assertFalse(derived_tag.simulated)
+        self.assertEqual(derived_tag.get_value(), constant_value)

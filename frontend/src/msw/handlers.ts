@@ -229,6 +229,7 @@ const getProcessValues: () => ProcessValue[] = () => [
     value: 23.4 + Math.random() * 2,
     value_unit: 'degC',
     direction: 'output',
+    plot_only: true,
     commands: [{
       name: 'Set target temperature',
       command: 'set_target_temperature',
