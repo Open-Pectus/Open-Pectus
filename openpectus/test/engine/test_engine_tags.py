@@ -8,7 +8,7 @@ from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum
 from openpectus.lang.exec.errors import EngineError
 from openpectus.lang.exec.events import EventListener
 from openpectus.lang.exec.regex import RegexNumber
-from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag, DerivedTag
+from openpectus.lang.exec.tags_impl import ReadingTag, ScopeTimeTag, SelectTag, DerivedTag
 from openpectus.engine.hardware import RegisterDirection
 
 import pint
@@ -256,6 +256,35 @@ Mark: A
             self.assertAlmostEqual(t1_value + t2_value + t3_value, run_time.as_float(), delta=delta)   # not paused while system is Paused
             self.assertAlmostEqual(t1_value + t3_value + 0.1, block_time.as_float(), delta=delta)  # paused while system is Paused
             self.assertAlmostEqual(t1_value + t3_value + 0.1, scope_time.as_float(), delta=delta)  # paused while system is Paused
+
+    def test_alarm_ends_scope(self):
+            logging.getLogger("openpectus.engine.engine").setLevel(logging.WARNING)
+            code = """\
+Alarm: Block Time > 0.9 s
+    End block
+
+Block: A
+    Mark: A
+
+Block: B
+    Mark: B
+
+Block: C
+    Mark: C
+
+Stop
+"""
+            runner = EngineTestRunner(create_test_uod, code)
+            with runner.run() as instance:
+                e = instance.engine
+                instance.start_run()
+
+                instance.run_until_instruction("Stop", max_ticks=60)
+
+                scope_time = instance.engine.tags[SystemTagName.SCOPE_TIME]
+                assert isinstance(scope_time, ScopeTimeTag)
+                self.assertEqual(scope_time._stack, ["root"])
+
 
     def test_tag_block_time_nested_blocks(self):
         p = """\
@@ -706,7 +735,7 @@ class TestAccumulation(unittest.TestCase):
                 method_status = instance.engine.tags[SystemTagName.METHOD_STATUS]
                 self.assertEqual(method_status.get_value(), MethodStatusEnum.OK)
 
-    def test_accumulated_volume(self):
+    def test_accumulatd_volume(self):
         uod = (UodBuilder()
                .with_instrument("TestUod")
                .with_author("Test Author", "test@openpectus.org")
