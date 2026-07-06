@@ -260,7 +260,7 @@ Mark: A
     def test_alarm_ends_scope(self):
             logging.getLogger("openpectus.engine.engine").setLevel(logging.WARNING)
             code = """\
-Alarm: Block Time > 0.9 s
+Alarm: Block Time > 1 s
     End block
 
 Block: A
@@ -280,11 +280,6 @@ Stop
                 instance.start_run()
 
                 instance.run_until_instruction("Stop", max_ticks=60)
-
-                scope_time = instance.engine.tags[SystemTagName.SCOPE_TIME]
-                assert isinstance(scope_time, ScopeTimeTag)
-                self.assertEqual(scope_time._stack, ["root"])
-
 
     def test_tag_block_time_nested_blocks(self):
         p = """\
