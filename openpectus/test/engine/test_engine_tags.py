@@ -8,7 +8,7 @@ from openpectus.engine.models import EngineCommandEnum, MethodStatusEnum
 from openpectus.lang.exec.errors import EngineError
 from openpectus.lang.exec.events import EventListener
 from openpectus.lang.exec.regex import RegexNumber
-from openpectus.lang.exec.tags_impl import ReadingTag, ScopeTimeTag, SelectTag, DerivedTag
+from openpectus.lang.exec.tags_impl import ReadingTag, SelectTag, DerivedTag
 from openpectus.engine.hardware import RegisterDirection
 
 import pint
@@ -730,7 +730,7 @@ class TestAccumulation(unittest.TestCase):
                 method_status = instance.engine.tags[SystemTagName.METHOD_STATUS]
                 self.assertEqual(method_status.get_value(), MethodStatusEnum.OK)
 
-    def test_accumulatd_volume(self):
+    def test_accumulated_volume(self):
         uod = (UodBuilder()
                .with_instrument("TestUod")
                .with_author("Test Author", "test@openpectus.org")
