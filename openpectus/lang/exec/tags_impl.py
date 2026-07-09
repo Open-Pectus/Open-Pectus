@@ -170,7 +170,7 @@ class ScopeTimeTag(Tag):
 
     def on_scope_end(self, scope_info):
         del self._timers[scope_info.node_id]
-        self._stack.pop()
+        self._stack.remove(scope_info.node_id)
         self.tracer.trace()
 
     def on_tick(self, tick_time, increment_time):

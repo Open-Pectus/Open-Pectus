@@ -340,6 +340,10 @@ class WhitespaceCheckAnalyzer(AnalyzerVisitorBase):
         self.visit_NodeWithChildren(node)
         yield from super().visit_AlarmNode(node)
 
+    def visit_MacroNode(self, node):
+        self.visit_NodeWithChildren(node)
+        yield from super().visit_MacroNode(node)
+
     def visit_BlockNode(self, node):
         self.visit_NodeWithChildren(node)
         yield from super().visit_BlockNode(node)

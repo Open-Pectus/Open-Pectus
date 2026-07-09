@@ -565,6 +565,30 @@ Stop
             instance.run_until_event("stop")
             self.assertEqual(danger.get_value(), False)
 
+    def test_alarm_ends_scope(self):
+            logging.getLogger("openpectus.engine.engine").setLevel(logging.WARNING)
+            code = """\
+Alarm: Block Time > 1 s
+    End block
+
+Block: A
+    Mark: A
+
+Block: B
+    Mark: B
+
+Block: C
+    Mark: C
+
+Stop
+"""
+            runner = EngineTestRunner(create_test_uod, code)
+            with runner.run() as instance:
+                e = instance.engine
+                instance.start_run()
+
+                instance.run_until_instruction("Stop", max_ticks=60)
+
 class TestAccumulation(unittest.TestCase):
 
     def create_test_uod(self):
