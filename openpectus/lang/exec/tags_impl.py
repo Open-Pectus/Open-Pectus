@@ -263,7 +263,6 @@ class AccumulatedColumnVolume(Tag):
             value = (v-self.v0) / cv
         super().set_value(value, tick_time)
 
-# TODO why inherit ChangeListener here - that looks like a mistake - test removing it
 class DerivedTag(Tag, ChangeListener):
     """Tag with value derived from other tags using a function.
        Tag has simulated status if any tags used for calculation
