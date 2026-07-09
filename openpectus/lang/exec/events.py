@@ -25,8 +25,6 @@ ScopeType = Literal["Program", "Watch", "Alarm", "Block"]
 class EventListener:
     """ Defines the listener interface and base class for engine life-time events. """
     def __init__(self) -> None:
-        super(EventListener, self).__init__()
-
         self.run_id: str | None = None
 
     def __str__(self) -> str:

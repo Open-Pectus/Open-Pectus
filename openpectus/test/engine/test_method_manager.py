@@ -123,8 +123,8 @@ class TestMethodManager(unittest.TestCase):
         self.test_skiplist = [
             # these used to have fail_on_log_error, no point in fixing them until the new impl is in place
             #"test_may_not_edit_an_executed_line",
-            #"test_may_not_edit_a_started_line",
-            #"test_may_edit_line_awaiting_threshold",
+            "test_may_not_edit_a_started_line",
+            "test_may_edit_line_awaiting_threshold",
             "test_macro_allows_editing_uncalled_macro",
             "test_macro_disallows_editing_called_macro",
             "test_edit_2_revisions",

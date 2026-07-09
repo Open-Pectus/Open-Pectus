@@ -5,6 +5,7 @@ from enum import StrEnum, auto
 from typing import Any, Callable, Iterable, Set
 import decimal
 
+from openpectus.lang.exec.elementstate import HasElementState
 from openpectus.lang.exec.events import EventListener
 from openpectus.lang.exec.units import convert_value_to_unit, is_supported_unit
 
@@ -75,11 +76,9 @@ class ChangeListener:
 
 
 class ChangeSubject:
-    """ Inherit to support change notification. Used by engine to track tag changes """
+    """ Inherit to support change notification. Used by engine to track tag changes. """
 
     def __init__(self) -> None:
-        super(ChangeSubject, self).__init__()
-
         self._listeners: list[ChangeListener] = []
 
     def __str__(self) -> str:
@@ -126,7 +125,7 @@ class Unset:
         return f'{self.__class__.__name__}()'
 
 
-class Tag(ChangeSubject, EventListener):
+class Tag(ChangeSubject, EventListener, HasElementState):
     """ Base class for tags. Most tags do not need their own class but can just use this class.
 
     Supports change tracking which is used by engine to detect changes between reads of hardware values.
@@ -134,6 +133,20 @@ class Tag(ChangeSubject, EventListener):
     Supports lifetime notification events that are automatically invoked by the engine.
 
     Supports masking the actual value with a simulated value.
+
+    Supports loading and saving state to support live-edit and crash recovery.
+
+    Note: We don't use 'cooperative multiple inheritance', because it gets too complex to do it correctly in
+    derived classes (see https://stackoverflow.com/a/50465583). Instead, Tag and its base classes handle the
+    particulars, leaving it simple custom tags that devire from Tag.
+
+    Custom tag classes have to:
+    - Inherit from Tag
+    - Call Tag constructor using: `Tag.__init__(self, <specific arguments to Tag constructor>)` (do not use `super()`)
+    - If the class has any attributes/properties of its own, it must:
+        - Override extract_state() and apply_state() to specify the state to save and load, respectively.
+
+    See a full example in the HasElementState doc-string.
     """
 
     def __init__(
@@ -145,8 +158,9 @@ class Tag(ChangeSubject, EventListener):
             direction: TagDirection = TagDirection.NA,
             format_fn: TagFormatFunction | None = None,
     ) -> None:
-
-        super(Tag, self).__init__()
+        ChangeSubject.__init__(self)
+        EventListener.__init__(self)
+        HasElementState.__init__(self, namespace="tags", element_id=name)
 
         assert name is not None
         assert name != ""
