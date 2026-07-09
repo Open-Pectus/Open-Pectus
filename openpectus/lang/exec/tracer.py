@@ -5,7 +5,7 @@ import logging
 
 class Tracer:
     """ Simple tracer that enables logging with automatic class and method details. """
-    def __init__(self, logger: logging.Logger, enabled=True):
+    def __init__(self, logger: logging.Logger, enabled=False):
         self.logger = logger
         self.enabled = enabled
 
