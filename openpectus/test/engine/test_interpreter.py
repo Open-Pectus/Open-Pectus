@@ -822,5 +822,21 @@ Wait: 0.5 s
             instance.run_until_event("method_end")
             self.assertEqual(instance.scope_node_history, ["root", "01", "02", "03"])
 
+    def test_macro_with_blank_line_does_not_hang(self):
+        code = """\
+Watch: Block Time > 0.1 s
+    Call macro: M
+Macro: M
+    Mark: MA
+
+    Mark: MB
+"""
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_instruction("Mark", state="completed", arguments="MB", max_ticks=30)
+            self.assertEqual(["MA", "MB"], instance.marks)
+
+
 if __name__ == "__main__":
     unittest.main()
