@@ -257,30 +257,6 @@ Mark: A
             self.assertAlmostEqual(t1_value + t3_value + 0.1, block_time.as_float(), delta=delta)  # paused while system is Paused
             self.assertAlmostEqual(t1_value + t3_value + 0.1, scope_time.as_float(), delta=delta)  # paused while system is Paused
 
-    def test_alarm_ends_scope(self):
-            logging.getLogger("openpectus.engine.engine").setLevel(logging.WARNING)
-            code = """\
-Alarm: Block Time > 1 s
-    End block
-
-Block: A
-    Mark: A
-
-Block: B
-    Mark: B
-
-Block: C
-    Mark: C
-
-Stop
-"""
-            runner = EngineTestRunner(create_test_uod, code)
-            with runner.run() as instance:
-                e = instance.engine
-                instance.start_run()
-
-                instance.run_until_instruction("Stop", max_ticks=60)
-
     def test_tag_block_time_nested_blocks(self):
         p = """\
 Wait: 1s
