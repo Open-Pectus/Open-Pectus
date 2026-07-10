@@ -19,7 +19,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/openpectus/aggregator/main.py",
             "console": "integratedTerminal",
-            "args": ["-fdd", "./openpectus/frontend/dist"],
+            "args": ["-fdd", "./frontend/dist"],
             "env": {
                 "AZURE_DIRECTORY_TENANT_ID": "",
                 "AZURE_APPLICATION_CLIENT_ID": "",
