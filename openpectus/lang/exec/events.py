@@ -59,15 +59,19 @@ class EventListener:
         pass
 
     def on_scope_start(self, scope_info: ScopeInfo):
+        """ Invoked when a new scope (Program, Watch, Alarm or Block) starts """
         pass
 
     def on_scope_activate(self, scope_info: ScopeInfo):
+        """ Invoked when a started scope (Program, Watch, Alarm or Block) is activated """
         pass
 
     def on_scope_end(self, scope_info: ScopeInfo):
+        """ Invoked when a started scope (Program, Watch, Alarm or Block) ends """
         pass
 
     def on_notify_command(self, argument: str):
+        """ Invoked when a Notify command is started """
         pass
 
     def on_tick(self, tick_time: float, increment_time: float):
@@ -78,7 +82,7 @@ class EventListener:
         pass
 
     def on_runstate_change(self, state_change: RunStateChange):
-        """ Is invoked when method interpretation is complete. """
+        """ Is invoked when run state changes, eg. on Pause or Unpause """
         pass
 
     def on_method_end(self):
