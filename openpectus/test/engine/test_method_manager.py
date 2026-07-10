@@ -145,7 +145,7 @@ class TestMethodManager(unittest.TestCase):
             "test_may_extend_alarm_after_alarm_activated",
             "test_may_extend_nested_alarm_after_alarm_activated",
             "test_may_extend_alarm",
-            #"test_extended_block_does_end",
+            "test_extended_block_does_end",
 
             "test_edit_injected",
 
