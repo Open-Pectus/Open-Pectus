@@ -1,13 +1,23 @@
 from __future__ import annotations
 import ast
+from dataclasses import dataclass
 import inspect
 import logging
 from typing import Any, TypedDict, get_type_hints
+from abc import ABC, abstractmethod
 
 
 logger = logging.getLogger(__name__)
 
-ElementKey = tuple[str, str]
+@dataclass
+class ElementKey:
+    namespace: str
+    element_id: str
+
+    def create_element_state(self) -> ElementState:
+        """ Create an ElementState object with the key filled in but otherwise empty """
+        return ElementState(namespace=self.namespace, element_id=self.element_id)
+
 
 # Impl note: using TypedDict because of its simple json serialization
 class ElementState(TypedDict):
@@ -17,17 +27,17 @@ class ElementState(TypedDict):
     """" The id of the element. Must be unique within its namespace. """
 
 
-class HasElementState():
+class HasElementState(ABC):
     """ Inheriting this class enables tags, uod commands and other elements to participate in state management
     as required by live-edit and engine crash recovery.
 
-    To do that, override apply_state and extract_state to handle the concrete state of your element.
+    To do that, implement/override element_key, apply_state and extract_state to handle the concrete state of your element.
 
-    Example code for a custom Tag:
-
+    Example code for a custom Tag (doesn't need to implement element_key because the Tag class handles it):
+```
     class MyTag(Tag):
         def __init__(some_argument: str):
-            Tag.__init__(self)  # Explicit call to Tag constructor. Do not use super().
+            super(MyTag, self).__init__()
 
             self.some_state: int = 7
 
@@ -41,33 +51,30 @@ class HasElementState():
             self.some_state = state["some_state"]  # type: ignore
 
         # tag implementation omitted ...
-
+```
     """
+    def __init__(self):
+        super(HasElementState, self).__init__()
 
-    def __init__(self, namespace: str, element_id: str):
-        if namespace is None or namespace.strip() == "":
-            raise ValueError("A non-empty namespace is required")
-        if element_id is None or element_id.strip() == "":
-            raise ValueError("A non-empty element_id is required")
-
-        self.namespace = namespace
-        self.element_id = element_id
-
-        # Note: element still needs to be registered. We'll leave that to the engine.
+        # Note: element still need to be registered - is handled by ElementStateRegistry.
 
     @property
+    @abstractmethod
     def element_key(self) -> ElementKey:
-        return (self.namespace, self.element_id)
+        """ Implement to specify which key to use for storing the element's state. """
+        raise NotImplementedError
 
+    @abstractmethod
     def apply_state(self, state: ElementState):
-        assert state["namespace"] == self.namespace
-        assert state["element_id"] == self.element_id
+        """ Override to handle import of class specific state. Must call super().apply_state(state). """       
+        assert state["namespace"] == self.element_key.namespace
+        assert state["element_id"] == self.element_key.element_id
 
+    @abstractmethod
     def extract_state(self) -> ElementState:
-        return ElementState(
-            namespace=self.namespace,
-            element_id=self.element_id
-        )
+        """ Override to handle export of class specific state. Must call state = super().extract_state() to create the state object. """
+        state = self.element_key.create_element_state()
+        return state
 
 
 class ElementStateRegistry():
@@ -81,10 +88,12 @@ class ElementStateRegistry():
         self._elements[key] = element
 
     def extract_all_state(self) -> dict[ElementKey, ElementState]:
-        state: dict[tuple[str, str], ElementState] = {}
+        state: dict[ElementKey, ElementState] = {}
         for key, element in self._elements.items():
             try:
-                state[key] = element.extract_state()
+                elm_state = element.extract_state()
+                assert key.namespace == elm_state["namespace"] and key.element_id == elm_state["element_id"]
+                state[key] = elm_state
             except Exception:
                 logger.error(f"Failed to extract state from element {key=}, element:\n{str(element)}", exc_info=True)
         return state

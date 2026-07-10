@@ -2,7 +2,7 @@ from __future__ import annotations
 from datetime import datetime
 import unittest
 
-from openpectus.lang.exec.elementstate import ElementState, HasElementState
+from openpectus.lang.exec.elementstate import ElementKey, ElementState, HasElementState
 from openpectus.lang.exec.tags import Tag
 
 
@@ -72,13 +72,19 @@ class TestHasElementState(unittest.TestCase):
 
 
 class TestElement(HasElementState):
-    # Example test class implementing HasElementState
+    # Example test class implementing HasElementState directly
 
-    def __init__(self, namespace: str, element_id: str, arg1: str, **kwargs):
-        super(TestElement, self).__init__(namespace=namespace, element_id=element_id, **kwargs)
+    def __init__(self, namespace: str, element_id: str, arg1: str):
+        super(TestElement, self).__init__()
 
+        self.namespace = namespace
+        self.element_id = element_id
         self.arg1 = arg1
         self.start_time = datetime.now()
+
+    @property
+    def element_key(self):
+        return ElementKey(namespace=self.namespace, element_id=self.element_id)
 
     def extract_state(self):
         state = super().extract_state()
@@ -94,7 +100,7 @@ class TestElement(HasElementState):
 
 class TestTag(Tag):
     def __init__(self, my_attribute: str):
-        Tag.__init__(self, "TestTag")
+        super(TestTag, self).__init__("TestTag")
         self.my_attribute = my_attribute
 
     def extract_state(self):

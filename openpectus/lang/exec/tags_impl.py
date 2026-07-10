@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class ReadingTag(Tag):
     """ Represents a common reading, i.e. a input tag with float values. """
     def __init__(self, name: str, unit: str | None = None, format_fn: TagFormatFunction | None = None) -> None:
-        Tag.__init__(self, name, value=0.0, unit=unit, direction=TagDirection.Input, format_fn=format_fn)
+        super().__init__(name, value=0.0, unit=unit, direction=TagDirection.Input, format_fn=format_fn)
 
     def set_value(self, val, *args, **kwargs):
         if val is not None:
@@ -35,7 +35,7 @@ class SelectTag(Tag):
     """ Represents a tag with choice values. """
     def __init__(self, name: str, value, unit: str | None,
                  choices: list[str], direction: TagDirection = TagDirection.NA) -> None:
-        Tag.__init__(self, name=name, value=value, unit=unit, direction=direction)
+        super().__init__(name=name, value=value, unit=unit, direction=direction)
         if choices is None or len(choices) == 0:
             raise ValueError(f'SelectTag "{self.name}" has no choices. Choices must be non-empty.')
         self.choices = choices
@@ -48,7 +48,7 @@ class SelectTag(Tag):
 
 class MarkTag(Tag):
     def __init__(self) -> None:
-        Tag.__init__(self, name=SystemTagName.MARK)
+        super().__init__(name=SystemTagName.MARK)
 
     def set_value(self, val: int | float | str | None, tick_time: float, *args, **kwargs) -> None:
         """ Append value to existing value """
@@ -72,8 +72,7 @@ class AccumulatorTag(Tag):
         SystemTagName.ACCUMULATED_VOLUME.
     """
     def __init__(self, name: str, totalizer: Tag):
-        Tag.__init__(self, name)
-
+        super().__init__(name)
         self.totalizer: Tag = totalizer
         self.unit = self.totalizer.unit
         self.v0: float | None = None
@@ -104,8 +103,7 @@ class BlockTimeTag(Tag):
             self.value: float = 0.0
 
     def __init__(self):
-        Tag.__init__(self, SystemTagName.BLOCK_TIME, unit="s", format_fn=format_time_as_clock)
-
+        super().__init__(SystemTagName.BLOCK_TIME, unit="s", format_fn=format_time_as_clock)
         # need a custom stack because we have no real key. BlockInfo.key is different in
         # on_block_start and on_block_end
         self._stack: list[BlockTimeTag.StackItem] = []
@@ -149,7 +147,7 @@ class ScopeTimeTag(Tag):
     tracer = Tracer(logger)
 
     def __init__(self):
-        Tag.__init__(self, SystemTagName.SCOPE_TIME, unit="s", format_fn=format_time_as_clock)
+        super().__init__(SystemTagName.SCOPE_TIME, unit="s", format_fn=format_time_as_clock)
         self._timers: dict[str, float] = {}
         self._stack: list[str] = []
         self._paused = False
@@ -202,7 +200,7 @@ class AccumulatorBlockTag(Tag):
         SystemTagName.BLOCK_VOLUME.
     """
     def __init__(self, name: str, totalizer: Tag):
-        Tag.__init__(self, name)
+        super().__init__(name)
         self.totalizer: Tag = totalizer
         self.root_block = BlockInfo("", 0)
         self.accumulator_stack: list[AccumulatorTag] = []
@@ -241,7 +239,7 @@ class AccumulatorBlockTag(Tag):
 
 class AccumulatedColumnVolume(Tag):
     def __init__(self, name: str, column_volume: Tag, totalizer: Tag):
-        Tag.__init__(self, name)
+        super().__init__(name)
         self.totalizer: Tag = totalizer
         self.column_volume: Tag = column_volume
         self.unit = "CV"
@@ -284,7 +282,7 @@ class DerivedTag(Tag, ChangeListener):
                  unit=None,
                  direction=TagDirection.NA,
                  format_fn=None):
-        Tag.__init__(self, name, tick_time, value, unit, direction, format_fn)
+        super().__init__(name, tick_time, value, unit, direction, format_fn)
         self._fn = fn
         self._input_tags = input_tags
         self._simulated_directly = False

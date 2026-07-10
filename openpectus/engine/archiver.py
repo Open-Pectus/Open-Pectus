@@ -53,7 +53,7 @@ class ArchiverTag(Tag):
                  runlog_accessor: RunlogAccessor,
                  tags_accessor: TagsAccessor,
                  data_log_interval_seconds: float) -> None:
-        Tag.__init__(self, SystemTagName.ARCHIVER)
+        super(ArchiverTag, self).__init__(SystemTagName.ARCHIVER)
         self.runlog_accessor = runlog_accessor
         self.tags_accessor = tags_accessor
         self.tags: TagCollection | None = None
