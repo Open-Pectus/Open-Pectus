@@ -145,7 +145,7 @@ class TestMethodManager(unittest.TestCase):
             "test_may_extend_alarm_after_alarm_activated",
             "test_may_extend_nested_alarm_after_alarm_activated",
             "test_may_extend_alarm",
-            "test_extended_block_does_end",
+            #"test_extended_block_does_end",
 
             "test_edit_injected",
 
@@ -337,7 +337,8 @@ class TestMethodManager(unittest.TestCase):
             instance.run_until_instruction("Mark", state="started", arguments="A")
 
             # edit method
-            instance.engine.set_method(method2)
+            op = instance.engine.set_method(method2)
+            assert op == "merge_method"
             instance.run_ticks(1)
 
             self.assertEqual("B1", block_tag.get_value())

@@ -7,6 +7,7 @@ from typing import Any, TypedDict, get_type_hints
 
 logger = logging.getLogger(__name__)
 
+ElementKey = tuple[str, str]
 
 # Impl note: using TypedDict because of its simple json serialization
 class ElementState(TypedDict):
@@ -55,20 +56,12 @@ class HasElementState():
         # Note: element still needs to be registered. We'll leave that to the engine.
 
     @property
-    def element_key(self) -> tuple[str, str]:
+    def element_key(self) -> ElementKey:
         return (self.namespace, self.element_id)
 
     def apply_state(self, state: ElementState):
         assert state["namespace"] == self.namespace
         assert state["element_id"] == self.element_id
-
-        # TODO move the below to managing class and provide the above as guarantee to HasElementState instances
-        if state["namespace"] != self.namespace:
-            logger.error(f"Internal error: Namespace mismatch (own: '{self.namespace}', state: '{state["namespace"]}') when applying state")
-        if state["element_id"] != self.element_id:
-            logger.error(
-                f"Internal error: Element id mismatch (own: '{self.element_id}', state: '{state["element_id"]}', namespace: {{self.namespace}})"
-                + " when applying state")
 
     def extract_state(self) -> ElementState:
         return ElementState(
@@ -79,7 +72,7 @@ class HasElementState():
 
 class ElementStateRegistry():
     def __init__(self):
-        self._elements: dict[tuple[str, str], HasElementState] = {}
+        self._elements: dict[ElementKey, HasElementState] = {}
 
     def register_element(self, element: HasElementState):
         key = element.element_key
@@ -87,7 +80,7 @@ class ElementStateRegistry():
             logger.error(f"Element with {key=} is already registered. The element is:\n{str(element)}")
         self._elements[key] = element
 
-    def extract_all_state(self) -> dict[tuple[str, str], ElementState]:
+    def extract_all_state(self) -> dict[ElementKey, ElementState]:
         state: dict[tuple[str, str], ElementState] = {}
         for key, element in self._elements.items():
             try:
@@ -96,7 +89,7 @@ class ElementStateRegistry():
                 logger.error(f"Failed to extract state from element {key=}, element:\n{str(element)}", exc_info=True)
         return state
 
-    def apply_all_state(self, state: dict[tuple[str, str], ElementState]):
+    def apply_all_state(self, state: dict[ElementKey, ElementState]):
         logger.info(f"Applying state to all {len(self._elements)} elements. State elements: {len(state)}")
         error_count = 0
         for key, element in self._elements.items():
