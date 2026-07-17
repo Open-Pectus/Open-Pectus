@@ -95,6 +95,11 @@ class SePath:
         """ Returns the canonical string representation of the path. """
         elms = [r.key for r in self._items]
         return " > ".join(elms)
+    
+    def node_ids(self) -> list[str]:
+        """ Returns the node ids of all items currently in the path, in stack order
+        (outermost/root first, current/innermost last). """
+        return [item.node_id for item in self._items]
 
     def __eq__(self, value):
         if value is None:
