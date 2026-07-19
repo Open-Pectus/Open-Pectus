@@ -975,16 +975,16 @@ class PInterpreter(NodeVisitor):
 
     def _is_in_ended_block(self, node: p.Node) -> bool:
         """ Returns True if any ancestor Block of node has been ended (block_ended).
-            Check both on the parent and the execution path. We cannot just rely on the execution path since, interrupts creates a fresh execution path, but might be situated in a block that has ended."""
+            Check both on the parent and the execution path. We cannot just rely on the execution path since, interrupts creates a fresh execution path, but might be situated in a block that has ended.    
+        """
         if any(isinstance(parent, p.BlockNode) and parent.block_ended for parent in node.parents):
-            logger.warning("True was returned")
             return True
         for node_id in self.sep.node_ids():   
             n = self.get_node_by_id(node_id)
             if isinstance(n, p.BlockNode) and n.block_ended:
-                logger.warning("True was returned")
                 return True
-        logger.warning("False was returned")
+            if n is not None and any(isinstance(parent, p.BlockNode) and parent.block_ended for parent in n.parents):
+                return True
         return False
 
     def _is_awaiting_threshold(self, node: p.Node):
