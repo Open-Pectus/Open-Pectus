@@ -299,12 +299,9 @@ class PInterpreter(NodeVisitor):
             if inx < node.child_index:
                 logger.debug(f"Child node loop for {node.key} skipping {child.key=} because {inx=} < {node.child_index=}")
                 continue
-
-            if isinstance(node, p.BlockNode) and node.block_ended:
-                logger.debug(f"Breaking child visit loop for block {node.key} that has ended. {node.child_index=}")
-                break
             
             if self._is_in_ended_block(child):
+                logger.debug(f"Breaking child visit loop on child {child.key} because it is in an ended block")
                 break 
 
             child_result = self.visit(child)
@@ -312,7 +309,7 @@ class PInterpreter(NodeVisitor):
             yield from child_result
             self.sep.pop()
             node.child_index += 1
-        #TODO, figure out why we always just set the children_complete flag here
+        
         node.children_complete = True
     
 # endregion General visit
