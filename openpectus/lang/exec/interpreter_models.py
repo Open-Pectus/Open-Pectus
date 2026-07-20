@@ -8,6 +8,7 @@ import logging
 from openpectus.lang.exec.visitor import NodeGenerator
 import openpectus.lang.model.ast as p
 from openpectus.lang.model.parser import ParserMethod
+from collections.abc import Iterable
 
 logger = logging.getLogger(__name__)
 
@@ -96,10 +97,9 @@ class SePath:
         elms = [r.key for r in self._items]
         return " > ".join(elms)
     
-    def node_ids(self) -> list[str]:
-        """ Returns the node ids of all items currently in the path, in stack order
-        (outermost/root first, current/innermost last). """
-        return [item.node_id for item in self._items]
+    def node_ids(self) -> Iterable[str]:
+        """ Returns the set of node ids of all items currently in the path. """
+        return {item.node_id for item in self._items}
 
     def __eq__(self, value):
         if value is None:

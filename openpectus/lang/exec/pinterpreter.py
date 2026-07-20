@@ -282,7 +282,7 @@ class PInterpreter(NodeVisitor):
             yield VisitResult.EndTick
 
     @override
-    def _visit_children(self, node: p.NodeWithChildren, node_parent: p.Node | None = None) -> NodeGenerator:
+    def _visit_children(self, node: p.NodeWithChildren) -> NodeGenerator:
         if node.completed:
             logger.debug(f"Visit children of node: {node} skipped, interrupt: {self._in_interrupt}, node is complete")
             yield VisitResult.ContinueTick
@@ -426,7 +426,7 @@ class PInterpreter(NodeVisitor):
 
         # invoke macro by visiting the macro node's children
         self.sep.push(macro_node, f"invocation.{macro_node.run_started_count - 1}")
-        yield from self._visit_children(macro_node, node)
+        yield from self._visit_children(macro_node)
         macro_node.run_completed_count += 1
         self.sep.pop()
 
