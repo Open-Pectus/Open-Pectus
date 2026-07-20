@@ -429,7 +429,6 @@ class PInterpreter(NodeVisitor):
 
         # invoke macro by visiting the macro node's children
         self.sep.push(macro_node, f"invocation.{macro_node.run_started_count - 1}")
-        logger.warning(f'Invoking macro')
         yield from self._visit_children(macro_node, node)
         macro_node.run_completed_count += 1
         self.sep.pop()
