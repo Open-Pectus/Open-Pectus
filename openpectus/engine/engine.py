@@ -229,7 +229,7 @@ class Engine(InterpreterContext):
         self.emitter.emit_on_engine_configured()
 
         # On engine start, write safe output values to hardware to bring hw to a known state
-        self._apply_safe_state()
+        self.apply_safe_state()
         self.write_process_image()
 
     def stop(self):
@@ -377,16 +377,37 @@ class Engine(InterpreterContext):
         # sense to wait until start
         self.method_manager.reset_interpreter()
 
-    def _apply_safe_state(self) -> TagValueCollection:
-        current_values: list[TagValue] = []
+    def apply_safe_state(self):
+        self._prev_state = self._collect_pre_safe_values()
+        safe_values = self._collect_safe_values()
+        self._apply_state(safe_values)
+
+    def apply_pre_safe_state(self):
+        if self._prev_state is not None:
+            self._apply_state(self._prev_state)
+            self._prev_state = None
+        else:
+            logger.warning("Failed to apply state prior to safe state. Prior state was not available")
+
+    def _collect_pre_safe_values(self) -> TagValueCollection:
+        tag_values: list[TagValue] = []
         hwl = self.uod.hwl
         registers = [r for r in hwl.registers.values()
                      if RegisterDirection.Write in r.direction and "safe_value" in r._options]
         for r in registers:
             tag = self.uod.tags[r.name]
-            current_values.append(tag.as_readonly())
-            tag.set_value(r._options["safe_value"], self._tick_time)
-        return TagValueCollection(current_values)
+            tag_values.append(tag.as_readonly())
+        return TagValueCollection(tag_values)
+
+    def _collect_safe_values(self) -> TagValueCollection:
+        tag_values: list[TagValue] = []
+        hwl = self.uod.hwl
+        registers = [r for r in hwl.registers.values()
+                     if RegisterDirection.Write in r.direction and "safe_value" in r._options]
+        for r in registers:
+            value = TagValue(r.name, self._tick_time, r._options["safe_value"])
+            tag_values.append(value)
+        return TagValueCollection(tag_values)
 
     def _apply_state(self, state: TagValueCollection):
         for t in self._iter_all_tags():
