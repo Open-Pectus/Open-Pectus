@@ -2,7 +2,6 @@ from __future__ import annotations
 from contextlib import contextmanager
 import logging
 from logging import LogRecord, Handler
-import random
 import time
 from typing import Callable, Generator, Literal
 
@@ -172,10 +171,14 @@ class EngineTestInstance(EventListener):
         return self.engine.interpreter.runtimeinfo
 
     @property
-    def scope_node(self) -> str | None:
+    def scope_node_id(self) -> str | None:
         if len(self._scopes) > 0:
             return self._scopes[-1].node_id
         return None
+
+    @property
+    def scope_node_ids(self) -> list[str]:
+        return [scope.node_id for scope in self._scopes]
 
     @property
     def scope_node_history(self) -> list[str]:
@@ -344,8 +347,8 @@ class EngineTestInstance(EventListener):
         try:
             ticks = self.run_until_condition(cond, max_ticks=max_ticks)
         except TimeoutError:
-            logger.error(self.get_runtime_table("At TimeoutError"))
-            logger.error(f"Timeout while waiting for instruction '{instruction_name}', state: {state}, arguments: {arguments}")
+            logger.warning(self.get_runtime_table("At TimeoutError"))
+            logger.warning(f"Timeout while waiting for instruction '{instruction_name}', state: {state}, arguments: {arguments}")
             raise TimeoutError(
                 f"Timeout while waiting for instruction '{instruction_name}', state: {state}, arguments: {arguments}")
 
@@ -457,6 +460,7 @@ class EngineTestInstance(EventListener):
 
     def on_start(self, run_id: str):
         self._last_event = "start"
+        self._scopes.clear()
 
     def on_block_start(self, block_info: BlockInfo):
         self._last_event = "block_start"
@@ -465,17 +469,21 @@ class EngineTestInstance(EventListener):
         self._last_event = "block_end"
 
     def on_scope_start(self, scope_info: ScopeInfo):
-        self._scopes.append(scope_info)
+        if scope_info.node_id in self.scope_node_ids:
+            logger.error(f"on_scope_start: Node {scope_info.node_id} is already in (a) scope")
+        else:
+            self._scopes.append(scope_info)
         self._scope_history.append(scope_info)
 
-    # def on_scope_activate(self, scope_info: ScopeInfo):
-    #     pass
+    def on_scope_activate(self, scope_info: ScopeInfo):
+        if scope_info.node_id not in self.scope_node_ids:
+            logger.error(f"on_scope_activate: Node {scope_info.node_id} is not in a started scope")
 
     def on_scope_end(self, scope_info: ScopeInfo):
-        if len(self._scopes) == 0:
-            logger.error("Scope error. Event scope_end was raised when no scope were active")
-            return
-        self._scopes.remove(scope_info)
+        if scope_info.node_id not in self.scope_node_ids:
+            logger.error(f"on_scope_end: Scope {scope_info} not in scopes. Actual scopes: {self._scopes}")
+        else:
+            self._scopes.remove(scope_info)
 
     def on_tick(self, tick_time: float, increment_time: float):
         pass
@@ -707,9 +715,12 @@ class TestLogHandler(Handler):
         if not isinstance(record, LogRecord):
             raise TypeError(f"emit was called with a record of unexpected type {type(record)}. Expected type LogRecord")
         if record.levelno >= logging.ERROR:
-            # skip TimeoutError and other internal errors
-            if record.name == __loader__.name:
-                return
+            # changed internal logs to warning - so no filtering is required
+            # if record.name == __loader__.name:
+            #     # skip TimeoutError and other internal errors so errors logged in this module 
+            #     skip_funcs = ['run_until_instruction']
+            #     if record.funcName in skip_funcs:
+            #         return
             self._errors.append(record)
 
             if self.raise_on_emit:
