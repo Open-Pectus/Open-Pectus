@@ -112,12 +112,12 @@ def create_runner(method: str | Method):
     return EngineTestRunner(
         create_test_uod,
         method,
-        fail_on_log_error=False  # many tests in this module deals with error handling so they need access to exceptions
-)
+        fail_on_log_error=False  # many tests in this module deal with error handling so they need access to exceptions
+        )
 
 
 class TestMethodManager(unittest.TestCase):
-    
+
     def __init__(self, methodName="runTest"):
         super().__init__(methodName)
         self.test_skiplist = [
@@ -222,16 +222,21 @@ class TestMethodManager(unittest.TestCase):
             self.assertEqual(True, instance.method_manager.program_is_started)
 
             # verify no edit error
-            instance.engine.set_method(method2)
+            action = instance.engine.set_method(method2)
+            self.assertEqual(action, "merge_method")
 
             self.assertEqual(1, instance.method_manager.program.version)
-            self.assertEqual(True, instance.method_manager.program_is_started)
 
             instance.run_until_instruction("Mark", state="completed", arguments="C")
 
+            # this is required for set_method to choose the merge_method over set_method
+            self.assertEqual(True, instance.method_manager.program_is_started)
+
             # verify edit error
             with self.assertRaises(MethodEditError):
-                instance.engine.set_method(method3)
+                action = instance.engine.set_method(method3)
+                self.assertEqual(action, "merge_method")
+
 
     def test_may_add_line_after_started_line(self):
 
@@ -332,7 +337,8 @@ class TestMethodManager(unittest.TestCase):
             instance.run_until_instruction("Mark", state="started", arguments="A")
 
             # edit method
-            instance.engine.set_method(method2)
+            op = instance.engine.set_method(method2)
+            assert op == "merge_method"
             instance.run_ticks(1)
 
             self.assertEqual("B1", block_tag.get_value())

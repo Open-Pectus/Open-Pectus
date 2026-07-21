@@ -1,7 +1,7 @@
 
 from datetime import datetime, timezone
 import logging
-from typing import Any, Callable
+from typing import Callable
 
 from openpectus.lang.exec.analyzer import WhitespaceCheckAnalyzer
 from openpectus.lang.exec.errors import MethodEditError
@@ -98,7 +98,7 @@ class MethodManager:
             raise ValueError("Program has not been set")
         if self._method is None:
             raise ValueError("Program has not been set")
-        
+
         return InterpreterState(
             export_date=datetime.now(timezone.utc),
             method=self._method.clone(),
