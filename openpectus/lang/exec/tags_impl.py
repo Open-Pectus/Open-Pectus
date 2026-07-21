@@ -155,6 +155,8 @@ class ScopeTimeTag(Tag):
 
     def on_start(self, run_id):
         self.value = 0.0
+        self._timers.clear()
+        self._stack.clear()
         self.tracer.trace()
 
     def on_scope_start(self, scope_info):

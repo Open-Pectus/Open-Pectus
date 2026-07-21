@@ -256,16 +256,21 @@ class PInterpreter(NodeVisitor):
             yield VisitResult.ContinueTick
             return
 
-        self.context.emitter.emit_on_block_start("root", self._tick_number)
-        self.context.emitter.emit_on_scope_start(node.id, "Program", "")
-        self.context.emitter.emit_on_scope_activate(node.id, "Program", "")
+        if not node.start_emitted:
+            self.context.emitter.emit_on_block_start("root", self._tick_number)
+            self.context.emitter.emit_on_scope_start(node.id, "Program", "")
+            self.context.emitter.emit_on_scope_activate(node.id, "Program", "")
+            node.start_emitted = True
 
         yield from self._visit_children(node)
 
         # Note: This event means that the last line of the method is complete.
         # The method may change later by an edit, so it doesn't necessarily mean
         # that the method has ended.
-        self.context.emitter.emit_on_method_end()
+        if not node.end_emitted:
+            self.context.emitter.emit_on_method_end()
+            node.end_emitted = True
+
         logger.debug("ProgramNode now idle")
 
         if self.main_sep.path != "root":
@@ -723,6 +728,7 @@ class PInterpreter(NodeVisitor):
     def visit_WatchNode(self, node: p.WatchNode) -> NodeGenerator:
         if not node.interrupt_registered:
             self._register_interrupt(node)
+            self.context.emitter.emit_on_scope_start(node.id, "Watch", node.arguments)
             yield VisitResult.EndTick
             return
 
@@ -755,13 +761,20 @@ class PInterpreter(NodeVisitor):
         if node.cancelled:
             logger.warning(f"Node {node} cancelled during invocation. This is too late - will run anyway")
         yield VisitResult.ContinueTick  # allows waiting for invocation path
-        self.context.emitter.emit_on_scope_activate(node.id, "Watch", node.arguments)
-        self.tracking.mark_started(node)
-        yield from self._visit_children(node)
-        self.sep.pop()
 
-        self.tracking.mark_completed(node)        
-        self.context.emitter.emit_on_scope_end(node.id, "Watch", node.arguments)
+        if not node.start_emitted:
+            self.context.emitter.emit_on_scope_activate(node.id, "Watch", node.arguments)
+            self.tracking.mark_started(node)
+            node.start_emitted = True
+
+        yield from self._visit_children(node)
+
+        if not node.end_emitted:
+            self.sep.pop()
+            self.tracking.mark_completed(node)        
+            self.context.emitter.emit_on_scope_end(node.id, "Watch", node.arguments)
+            node.end_emitted = True
+
         node.completed = True
         yield VisitResult.ContinueTick
 
@@ -770,6 +783,7 @@ class PInterpreter(NodeVisitor):
         if not node.interrupt_registered:
             # Note self._in_interrupt == True is uncommon but valid if watch/alarm is nested inside a watch/alarm
             self._register_interrupt(node)
+            self.context.emitter.emit_on_scope_start(node.id, "Alarm", node.arguments)
             yield VisitResult.EndTick
             return
 
@@ -797,25 +811,29 @@ class PInterpreter(NodeVisitor):
                 yield VisitResult.EndTick
             self.sep.pop()
 
-        self.sep.push(node, f"invocation.{node.run_count}")        
-        self.context.emitter.emit_on_scope_activate(node.id, "Alarm", node.arguments)
-        self.tracking.mark_started(node)
-        yield VisitResult.ContinueTick  # allows waiting for invocation path
+        if not node.start_emitted:
+            self.sep.push(node, f"invocation.{node.run_count}")        
+            self.context.emitter.emit_on_scope_activate(node.id, "Alarm", node.arguments)
+            self.tracking.mark_started(node)
+            node.start_emitted = True
+            yield VisitResult.ContinueTick  # allows waiting for invocation path
 
         yield from self._visit_children(node)
-        self.sep.pop()
-        #node.completed = True
-        yield VisitResult.ContinueTick
 
+        if not node.end_emitted:
+            self.sep.pop()
+            self.tracking.mark_completed(node)
+            self.context.emitter.emit_on_scope_end(node.id, "Alarm", node.arguments)
+            node.end_emitted = True
 
-        self.tracking.mark_completed(node)
-        self.context.emitter.emit_on_scope_end(node.id, "Alarm", node.arguments)
+            yield VisitResult.ContinueTick
 
-        logger.debug(f"Re-register interrupt for completed Alarm {node.key}")
-        node.run_count += 1
-        self._unregister_interrupt(node)
-        node.reset_runtime_state(recursive=True)
-        self._register_interrupt(node)
+            logger.debug(f"Re-register interrupt for completed Alarm {node.key}")
+            node.run_count += 1
+            self._unregister_interrupt(node)
+            node.reset_runtime_state(recursive=True)
+            self._register_interrupt(node)
+            self.context.emitter.emit_on_scope_start(node.id, "Alarm", node.arguments)
 
         # if this is set, alarm body will not execute in interrupt - but it is never set then? guess that is ok
         # what does that mean for runlog?
@@ -905,12 +923,6 @@ class PInterpreter(NodeVisitor):
         logger.debug(f"Interrupt registered for {node}, handler: {handler_name}")
         self._interrupts_map[node.id] = Interrupt(node, handler)
         node.interrupt_registered = True
-
-        # TODO: Do we need this?!
-        if isinstance(node, p.WatchNode):
-            self.context.emitter.emit_on_scope_start(node.id, "Watch", node.arguments)
-        if isinstance(node, p.AlarmNode):
-            self.context.emitter.emit_on_scope_start(node.id, "Alarm", node.arguments)
 
 
     def _unregister_interrupt(self, node: p.NodeWithChildren, warn_on_no_registration=True):

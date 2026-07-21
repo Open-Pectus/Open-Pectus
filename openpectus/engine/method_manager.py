@@ -45,15 +45,14 @@ class MethodManager:
         return interpreter
 
     def _create_interpreter_from_state(self, state: InterpreterState, raise_change_event=True) -> PInterpreter:
-        logger.debug(f"Creating new interpreter from state, method version: {state.method.version}")
-        
-        self._method = state.method
-        parser = create_method_parser(self._method, self._uod_command_names)
-        self._program = parser.parse_method(self._method)
+        logger.debug(f"Creating new interpreter from state, method versions, current / new: {self._method.version} / {state.method.version}")
 
-        self._apply_analysis(self._program)
+        parser = create_method_parser(state.method, self._uod_command_names)
+        program = parser.parse_method(state.method)
 
-        instance = self._create_interpreter(self.program, raise_change_event=raise_change_event)
+        self._apply_analysis(program)
+
+        instance = self._create_interpreter(program, raise_change_event=raise_change_event)
 
         # Apply the state to all nodes. In case of merge, the state has been patched by the hotswap visitor.
         logger.debug("Applying program state")
@@ -111,8 +110,7 @@ class MethodManager:
     def _create_interpreter_merge_state(self, new_method: ParserMethod) -> InterpreterState:
         assert self._method is not None
         assert self._program is not None
-        method = self._method
-        program = self.program
+        old_program = self.program
         state = self._get_interpreter_state()
         new_program = self._parse(new_method)
 
@@ -134,7 +132,7 @@ class MethodManager:
         self._validate_liveedit_method(new_method)
 
         logger.debug("Applying hotswap visitor to create merged state")
-        swapper = HotSwapVisitor(old_program=program, old_state=state)
+        swapper = HotSwapVisitor(old_program=old_program, old_state=state)
         main_generator = swapper.run(new_program)
         while True:
             try:
@@ -142,7 +140,6 @@ class MethodManager:
                 if main_result == VisitResult.IteratorExhausted:
                     break
             except StopIteration:
-                # logger.debug("Main generator is exhausted")
                 break
 
         # stich the new state together from values we know and values the swapper knows
@@ -184,7 +181,7 @@ class MethodManager:
 
         # convert method from protocol api and apply the new method
         assert not self.program_is_started, "Program has already started, use merge_method() instead of set_method()"
-        
+
         self._method = self._to_parser_method(method)
         self._program = self._parse(self._method)
 
@@ -212,7 +209,7 @@ class MethodManager:
             logger.warning(f"new_method version is equal to old method version: {old_version}")
 
         new_method = self._to_parser_method(_new_method)
-        new_program = self._parse(new_method)
+
         try:
             merge_state = self._create_interpreter_merge_state(new_method)
         except MethodEditError:
@@ -227,7 +224,7 @@ class MethodManager:
         # finally commit the "transaction"
         self._interpreter = interpreter
         self._method = new_method
-        self._program = new_program
+        self._program = interpreter._program
 
         # and notify that interpreter was renewed
         self._interpreter_reset_handler(interpreter)

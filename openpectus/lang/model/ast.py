@@ -508,6 +508,9 @@ class ProgramNode(NodeWithChildren):
         self.macros: dict[str, MacroNode] = dict()
         """ Registered macros """
 
+        self.start_emitted = False
+        self.end_emitted = False
+
     @property
     def key(self) -> str:
         """ Overridden, key of ProgramNode is just 'root' rather than the verbose 'root.ProgramNode'"""
@@ -588,10 +591,14 @@ class ProgramNode(NodeWithChildren):
     def extract_state(self) -> NodeState:
         state = super().extract_state()
         state["version"] = self.version  # type: ignore
+        state["start_emitted"] = self.start_emitted  # type: ignore
+        state["end_emitted"] = self.end_emitted  # type: ignore
         return state
 
     def apply_state(self, state: NodeState):
-        self.version = int(state["version"])  # type: ignore
+        # Note: self.version is not applied from state, as this should change exactly when a new version is set        
+        self.start_emitted = bool(state["start_emitted"])  # type: ignore
+        self.end_emitted = bool(state["end_emitted"])  # type: ignore
         return super().apply_state(state)
 
     def __str__(self):
@@ -663,20 +670,29 @@ class NodeWithCondition(NodeWithChildren, NodeWithTagOperatorValue):
         self.activated: bool = False
         """ Node condition was evaluated true"""
 
+        self.start_emitted = False
+        self.end_emitted = False
+
     def apply_state(self, state: NodeState):
         super().apply_state(state)
         self.awaiting_condition = bool(state["awaiting_condition"])  # type: ignore
         self.activated = bool(state["activated"])  # type: ignore
+        self.start_emitted = bool(state["start_emitted"])  # type: ignore
+        self.end_emitted = bool(state["end_emitted"])  # type: ignore
 
     def extract_state(self) -> NodeState:
         state = super().extract_state()
         state["awaiting_condition"] = self.awaiting_condition  # type: ignore
         state["activated"] = self.activated  # type: ignore
+        state["start_emitted"] = self.start_emitted  # type: ignore
+        state["end_emitted"] = self.end_emitted  # type: ignore
         return state
 
     def reset_runtime_state(self, recursive):
         self.awaiting_condition = False
         self.activated = False
+        self.start_emitted = False
+        self.end_emitted = False
         # this is incorrect but i think a test depends on it. should find it and fix it correctly
         #self.tag_operator_value = None
         super().reset_runtime_state(recursive)

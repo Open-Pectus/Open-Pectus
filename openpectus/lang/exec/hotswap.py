@@ -39,7 +39,7 @@ class HotSwapVisitor(NodeVisitor):
     def visit(self, node) -> NodeGenerator:
         logger.debug(f"Visit node {node}")
 
-        old_node = self.old_program.get_child_by_id(node.id)
+        old_node = self.old_program.get_child_by_id(node.id, include_self=True)
         if old_node is None:
             logger.debug(f"Node {node.key} is added and thus has no state from old program")
             return
@@ -50,7 +50,7 @@ class HotSwapVisitor(NodeVisitor):
             logger.error(f"Merge failed for Node {node.key}." +
                          f"Old node was started but its class {old_node.__class__.__name__} " +
                          f"does not match new node class {node.__class__.__name__}")
-            raise MethodEditError(f"Node {old_node} was edited to be {node} of a different class. " +
+            raise MethodEditError(f"Node {old_node} was started and edited to be {node} of a different class. " +
                                   "This is not a supported kind of edit")
         else:
             should_apply_state = True
@@ -58,8 +58,9 @@ class HotSwapVisitor(NodeVisitor):
                 if old_node_is_whitespace:
                     should_apply_state = False
                 else:
-                    raise MethodEditError(
-                        f"Node class mismatch, old class: {old_node.__class__}, new class: {node.__class__}")
+                    should_apply_state = False
+                    # raise MethodEditError(
+                    #     f"Node class mismatch, old class: {old_node.__class__}, new class: {node.__class__}")
 
             if should_apply_state:
                 old_node_state = self.old_state.tree_state.get(node.id)
