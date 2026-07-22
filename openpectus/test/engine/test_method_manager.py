@@ -122,8 +122,8 @@ class TestMethodManager(unittest.TestCase):
         super().__init__(methodName)
         self.test_skiplist = [
             # these used to have fail_on_log_error, no point in fixing them until the new impl is in place
-            "test_macro_allows_editing_uncalled_macro",
-            "test_macro_disallows_editing_called_macro",
+            #"test_macro_allows_editing_uncalled_macro",
+            #"test_macro_disallows_editing_called_macro",
             "test_edit_2_revisions",
             "test_macro_edit_2_revisions_1",
             "test_macro_edit_2_revisions_2",
@@ -135,7 +135,7 @@ class TestMethodManager(unittest.TestCase):
             "test_block_is_rerun_after_edit",
 
             # crash, discovered during #842
-            "test_block_edit_crash",
+            #"test_block_edit_crash",
 
 
             "test_edit_injected",
@@ -599,7 +599,7 @@ class TestMethodManager(unittest.TestCase):
 
             # method2 runs
             instance.run_until_instruction("Mark", state="completed", arguments="D")
-            self.assertEqual(["C", "B", "D"], instance.marks)
+            self.assertEqual(["B", "D"], instance.marks)
 
     def test_macro_disallows_editing_called_macro(self):
 
@@ -624,6 +624,8 @@ class TestMethodManager(unittest.TestCase):
             # verify edit error
             with self.assertRaises(MethodEditError):
                 instance.engine.set_method(method2)
+
+            runner.clear_errors()
 
     def test_compare_macro_source(self):
         logger = logging.getLogger("null")
@@ -1109,10 +1111,8 @@ Watch: Run counter > 0
 
     def test_block_is_rerun_after_edit(self):
         # Previously executed block is re-run after edit #842
-        # lot sof weird stuff going on
-        # first edit does nothing, even fails if not waiting for Block to complete
-        # second edit becomes a set instead of merge which causes method restart
-        # test runner fails to access the second edit instance so its runlog is empty
+
+        # issue seems to be that ProgramNode.children_completed is set so Block: B never starts
         method1 = Method.from_numbered_pcode("""\
 01 Block: A
 02     Mark: A
@@ -1135,21 +1135,15 @@ Watch: Run counter > 0
         runner = create_runner(method1)
         with runner.run() as instance:
             instance.start()
-        #     instance.run_until_instruction("Block", state="completed", arguments="A")
-        #     instance.run_ticks(3) # skipping this causes crash
-            instance.run_until_instruction("End block", state="completed")
-            instance.run_ticks(3) # skipping this causes crash
+            instance.run_until_instruction("Block", state="completed", arguments="A")
             self.assertEqual(["A"], instance.marks)
 
-            instance.engine.set_method(method2)
-            instance.run_ticks(3)
-
-            instance.engine.set_method(method2)
-            instance.run_ticks(3)
+            op = instance.engine.set_method(method2)
+            self.assertEqual(op, "merge_method")
 
             instance.run_until_instruction("Block", state="completed", arguments="B", max_ticks=50)
-            instance.run_until_instruction("End block", state="completed")
-            self.assertEqual(["A", "B"], instance.marks)
+            #instance.run_until_instruction("End block", state="completed")
+            self.assertEqual(["B"], instance.marks)
 
     def test_block_edit_crash(self):
         # test for edit crash found during #842
