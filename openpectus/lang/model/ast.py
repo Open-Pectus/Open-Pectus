@@ -247,7 +247,7 @@ class Node(SupportCancelForce):
             raise ValueError(f"Cannot load state from {state['class_name']} into {self.__class__}")
         self.started = state["started"]
         self.completed = state["completed"]
-        self.failed = state["failed"]
+        # do not import 'failed' - it should have the oportunity to run again and not fail
         self._cancelled = state["cancelled"]
         self._forced = state["forced"]
 

@@ -10,7 +10,7 @@ from openpectus.engine.models import EngineCommandEnum
 from openpectus.lang.exec.clock import WallClock
 from openpectus.lang.exec.errors import EngineError
 from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
-from openpectus.lang.exec.events import BlockInfo, EventListener, ScopeInfo
+from openpectus.lang.exec.events import BlockInfo, EventListener, ScopeCollection, ScopeInfo
 from openpectus.lang.exec.timer import NullTimer
 from openpectus.lang.exec.uod import UnitOperationDefinitionBase
 from openpectus.lang.exec.pinterpreter import PInterpreter
@@ -108,6 +108,10 @@ class EngineTestRunner:
             del instance
             self.error_log_handler.unregister()
 
+    def clear_errors(self):
+        """ Discard any currently collected errors so the test won't fail because of them. Only relevant when fail_on_log_error is True. """
+        self.error_log_handler._errors.clear()
+
 class EngineTestInstance(EventListener):
     def __init__(self, engine: Engine, method: str | Mdl.Method, timing: EngineTiming) -> None:
         self.engine = engine
@@ -140,7 +144,7 @@ class EngineTestInstance(EventListener):
         # register as listener for lifetime events, so these events can be awaited in the tests
         self.add_event_listener(self)
         self._last_event: EventName | None = None
-        self._scopes: list[ScopeInfo] = []
+        self._scopes = ScopeCollection()
         self._scope_history: list[ScopeInfo] = []
 
     def start(self):
@@ -172,13 +176,7 @@ class EngineTestInstance(EventListener):
 
     @property
     def scope_node_id(self) -> str | None:
-        if len(self._scopes) > 0:
-            return self._scopes[-1].node_id
-        return None
-
-    @property
-    def scope_node_ids(self) -> list[str]:
-        return [scope.node_id for scope in self._scopes]
+        return self._scopes.latest_node_id
 
     @property
     def scope_node_history(self) -> list[str]:
@@ -469,18 +467,18 @@ class EngineTestInstance(EventListener):
         self._last_event = "block_end"
 
     def on_scope_start(self, scope_info: ScopeInfo):
-        if scope_info.node_id in self.scope_node_ids:
+        if scope_info in self._scopes:
             logger.error(f"on_scope_start: Node {scope_info.node_id} is already in (a) scope")
         else:
             self._scopes.append(scope_info)
         self._scope_history.append(scope_info)
 
     def on_scope_activate(self, scope_info: ScopeInfo):
-        if scope_info.node_id not in self.scope_node_ids:
+        if scope_info not in self._scopes:
             logger.error(f"on_scope_activate: Node {scope_info.node_id} is not in a started scope")
 
     def on_scope_end(self, scope_info: ScopeInfo):
-        if scope_info.node_id not in self.scope_node_ids:
+        if scope_info not in self._scopes:
             logger.error(f"on_scope_end: Scope {scope_info} not in scopes. Actual scopes: {self._scopes}")
         else:
             self._scopes.remove(scope_info)

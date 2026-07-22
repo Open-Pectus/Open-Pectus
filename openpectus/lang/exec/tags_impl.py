@@ -4,7 +4,7 @@ import time
 from typing import Callable
 
 from openpectus.lang.exec.tags import SystemTagName, Tag, TagDirection, TagFormatFunction, format_time_as_clock, TagValueType, ChangeListener
-from openpectus.lang.exec.events import BlockInfo, RunStateChange
+from openpectus.lang.exec.events import BlockInfo, RunStateChange, ScopeCollection
 from openpectus.lang.exec.tracer import Tracer
 
 # Make sure the mark separator does not conflict with ArchiverTag delimiter.
@@ -120,7 +120,12 @@ class BlockTimeTag(Tag):
         self.tracer.trace(f"{block_info.name=}")
 
     def on_block_end(self, block_info, new_block_info):
-        self._stack.pop()
+        if not any(self._stack):
+            logger.error("on_block_end: stack is empty")
+        elif self._stack[-1].name != block_info.name:
+            logger.error(f"on_block_end: block name is {block_info.name} but active block is {self._stack[-1].name}")
+        else:
+            self._stack.pop()
         self.tracer.trace(f"{block_info.name=}")
 
     def on_tick(self, tick_time, increment_time):
@@ -143,35 +148,46 @@ class BlockTimeTag(Tag):
         item = self._stack[-1]
         return item.value
 
+
 class ScopeTimeTag(Tag):
     tracer = Tracer(logger)
 
     def __init__(self):
         super().__init__(SystemTagName.SCOPE_TIME, unit="s", format_fn=format_time_as_clock)
         self._timers: dict[str, float] = {}
-        self._stack: list[str] = []
+        self._scopes = ScopeCollection()
         self._paused = False
         self.value = 0.0
 
     def on_start(self, run_id):
         self.value = 0.0
         self._timers.clear()
-        self._stack.clear()
+        self._scopes.clear()
         self.tracer.trace()
 
     def on_scope_start(self, scope_info):
+        if scope_info in self._scopes:
+            logger.error(f"on_scope_start: scope {str(scope_info)} already active")
+
         self.value = 0.0
-        self.tracer.trace()
+        self.tracer.trace(scope_info.node_id)
 
     def on_scope_activate(self, scope_info):
+        if scope_info in self._scopes:
+            logger.error(f"on_scope_activate: scope {str(scope_info)} already active")
+
+        self._scopes.append(scope_info)
         self._timers[scope_info.node_id] = 0.0
-        self._stack.append(scope_info.node_id)
-        self.tracer.trace()
+        self.tracer.trace(scope_info.node_id)
 
     def on_scope_end(self, scope_info):
+        if scope_info not in self._scopes:
+            logger.error(f"on_scope_end: Scope {scope_info} not in scopes. Actual scopes: {self._scopes}")
+        else:
+            self._scopes.remove(scope_info)
+
         del self._timers[scope_info.node_id]
-        self._stack.remove(scope_info.node_id)
-        self.tracer.trace()
+        self.tracer.trace(scope_info.node_id)
 
     def on_tick(self, tick_time, increment_time):
         if self._paused:
@@ -188,9 +204,10 @@ class ScopeTimeTag(Tag):
             self._paused = False
 
     def get_value(self):
-        if len(self._stack) == 0:
+        if len(self._scopes) == 0:
             return 0.0
-        node_id = self._stack[-1]
+        node_id = self._scopes.latest_node_id
+        assert node_id is not None  # because len > 0
         try:
             return self._timers[node_id]
         except KeyError:

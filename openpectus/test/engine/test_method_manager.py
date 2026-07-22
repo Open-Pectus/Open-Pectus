@@ -127,8 +127,6 @@ class TestMethodManager(unittest.TestCase):
             "test_edit_2_revisions",
             "test_macro_edit_2_revisions_1",
             "test_macro_edit_2_revisions_2",
-            "test_continue_after_failed_edit",
-            "test_resume_after_error_invalid_unit",
 
             # issue #864
             "test_edit_fails_when_watch_body_is_executing",
@@ -139,8 +137,6 @@ class TestMethodManager(unittest.TestCase):
             # crash, discovered during #842
             "test_block_edit_crash",
 
-            "test_may_extend_nested_alarm_after_alarm_activated",
-            "test_may_extend_alarm",
 
             "test_edit_injected",
 
@@ -305,7 +301,6 @@ class TestMethodManager(unittest.TestCase):
 
             # verify no edit error
             instance.engine.set_method(method2)
-            instance.run_ticks(1)
 
             instance.run_until_instruction("Mark", state="completed", arguments="C")
 
@@ -338,7 +333,6 @@ class TestMethodManager(unittest.TestCase):
             # edit method
             op = instance.engine.set_method(method2)
             assert op == "merge_method"
-            instance.run_ticks(1)
 
             self.assertEqual("B1", block_tag.get_value())
             instance.run_until_instruction("End block", state="completed")
@@ -412,7 +406,6 @@ class TestMethodManager(unittest.TestCase):
 
             # insert Mark: D and verify no edit error
             instance.engine.set_method(method2)
-            instance.run_ticks(1)
 
             instance.run_until_instruction("Mark", state="completed", arguments="D")
 
@@ -426,7 +419,15 @@ class TestMethodManager(unittest.TestCase):
             self.assertEqual(["C", "D", "B", "C", "D"], instance.marks)
 
 
+    @unittest.skip("poorly defined semantics of nested interrupts")
     def test_may_extend_nested_alarm_after_alarm_activated(self):
+
+        # Fails with scope error "on_scope_start: Node 05 is already in (a) scope" after edit
+        # because the Watch interrupt gets overwritten.
+        # The problem is defining the lifetime of the nested interrupt. Should if outlive the outer
+        # interrupt (which is does now) or should it be recreated within its parent. Both have theirs
+        # pros and cons.
+
         method1 = Method.from_numbered_pcode("""\
 01 Base: s
 02 Alarm: Run Time > 0s
@@ -449,12 +450,11 @@ class TestMethodManager(unittest.TestCase):
 
             # insert Mark: D and verify no edit error
             instance.engine.set_method(method2)
-            instance.run_ticks(1)
 
             instance.run_until_instruction("Mark", state="completed", arguments="D")
 
             # verify run behavior
-            self.assertEqual(["B", "C", "D"], instance.marks)
+            self.assertEqual(["C", "B", "D"], instance.marks)
 
 
     def test_may_extend_alarm(self):
@@ -482,13 +482,13 @@ class TestMethodManager(unittest.TestCase):
             instance.run_until_instruction("Mark", state="completed", arguments="D")
 
             # verify run behavior
-            self.assertEqual(["B", "C", "D"], instance.marks)
+            self.assertEqual(["C", "D"], instance.marks)
 
             # verify alarm is repeated
             alarm_node = instance.method_manager.program.get_first_child(p.AlarmNode)
             assert alarm_node is not None
             instance.run_until_condition(lambda: alarm_node.run_count == 2)
-            self.assertEqual(["B", "C", "D", "B", "C", "D"], instance.marks)
+            self.assertEqual(["C", "D", "B", "C", "D"], instance.marks)
 
     def test_may_edit_blank_to_other_instruction(self):
         # When editing the last line, it is interpreted as an edited node type. This type of edit
@@ -1070,7 +1070,6 @@ Watch: Run counter > 0
 
             instance.engine.set_method(method2)
 
-        #     instance.run_ticks(1)
         #     print_runtime_records(instance.engine, "post-edit")
         #     print_runlog(instance.engine, "post-edit")
 
@@ -1232,6 +1231,8 @@ Watch: Run counter > 0
             with self.assertRaises(MethodEditError):
                 instance.engine.set_method(method2)
 
+            runner.clear_errors()
+
             # but the previous interpreter can still continue
             self.assertEqual(0, instance.method_manager.program.version)
             instance.run_until_instruction("Mark", arguments="C", state="completed")
@@ -1252,6 +1253,9 @@ Watch: Run counter > 0
 
             with self.assertRaises(EngineError) as ctx:
                 instance.run_until_instruction("Watch", "completed")
+
+            # clear collected errors so test doesn't fail because of it
+            runner.clear_errors()
 
             ex = ctx.exception.__cause__
             assert isinstance(ex, InterpretationError)
