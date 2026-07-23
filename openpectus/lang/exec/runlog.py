@@ -107,6 +107,22 @@ class RuntimeInfo:
                 raise
         runlog.items.sort(key=lambda item: item.start)
         return runlog
+    
+    def get_queued_runlog(self) -> RunLog:
+        runlog = RunLog()
+        for r in self.records_filtered:
+            if r.name is None or r.name == "Stop":
+                continue
+            if any(cls.is_class_of_name(r.node_class_name)
+                for cls in (p.ProgramNode, p.BlankNode, p.CommentNode, p.InjectedNode)):
+                continue
+            if r.states:
+                continue  
+            item = RunLogItem()
+            item.id = r.node_id           
+            item.name = r.name
+            runlog.items.append(item)
+        return runlog
 
     def _get_runlog_id(self) -> str | None:
         return None
