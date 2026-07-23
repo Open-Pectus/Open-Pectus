@@ -99,6 +99,12 @@ class RunLogMsg(EngineMessage):
         return (f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number}, ' +
                 f'id="{self.id}", run_id="{self.run_id}", runlog={self.runlog})')
 
+class QueuedRunLogMsg(EngineMessage):
+    runlog: Mdl.RunLog
+
+    def __str__(self) -> str:
+        return (f'{self.__class__.__name__}(engine_id="{self.engine_id}", sequence_number={self.sequence_number}, ' +
+                f'runlog={self.runlog})')
 
 class ErrorLogMsg(EngineMessage):
     log: Mdl.ErrorLog

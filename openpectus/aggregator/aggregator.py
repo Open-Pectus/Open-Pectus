@@ -89,6 +89,7 @@ class FromEngine:
             if engine_data is None:
                 logger.error("No engine data available on run_started for engine " + engine_id)
                 return
+            engine_data.queued_runlog = Mdl.RunLog.empty()
             if not engine_data.has_run():
                 engine_data.reset_run()
                 engine_data.run_data = Mdl.RunData.empty(
@@ -276,6 +277,17 @@ class FromEngine:
 
         if engine_data.run_data.runlog != runlog:
             engine_data.run_data.runlog = runlog
+            asyncio.create_task(self.publisher.publish_run_log_changed(engine_id))
+
+    def queued_runlog_changed(self, engine_id: str, runlog: Mdl.RunLog):
+        engine_data = self._engine_data_map.get(engine_id)
+        if engine_data is None:
+            logger.error(f'No engine registered under id {engine_id} for queued runlog update.')
+            return
+        if engine_data.has_run():
+            return
+        if engine_data.queued_runlog != runlog:
+            engine_data.queued_runlog = runlog
             asyncio.create_task(self.publisher.publish_run_log_changed(engine_id))
 
     def control_state_changed(self, engine_id: str, control_state: Mdl.ControlState):

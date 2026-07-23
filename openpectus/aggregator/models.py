@@ -216,6 +216,7 @@ class EngineData:
         self.required_roles: set[str] = set()
         self.hardware_str: str = hardware_str
         self.data_log_interval_seconds: float = data_log_interval_seconds
+        self.queued_runlog: RunLog = RunLog.empty()
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}(engine_id="{self.engine_id}", control_state={self.control_state})'
@@ -251,7 +252,6 @@ class EngineData:
         self.method_state = MethodState.empty()
         self.contributors = set()
 
-
 class NotificationScope(StrEnum):
     PROCESS_UNITS_WITH_RUNS_IVE_CONTRIBUTED_TO = auto()
     PROCESS_UNITS_I_HAVE_ACCESS_TO = auto()
@@ -275,7 +275,6 @@ class WebPushNotificationPreferences(BaseModel):
     scope: NotificationScope
     topics: set[NotificationTopic]
     process_units: set[str]
-
 
 
 class WebPushAction(BaseModel):
