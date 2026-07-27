@@ -444,10 +444,15 @@ class PInterpreter(NodeVisitor):
             # We can take the lock iff
             # 1) There are no locked blocks or 2) all locked blocks are ancestors of node
             ancestors = node.parents
-            for block in self._program.get_locked_blocks():
-                if block not in ancestors:
-                    logger.debug(f"Block {node.key} could not acquire lock, {block.key} holds it")
-                    return
+            is_injected = any(isinstance(a, p.InjectedNode) for a in ancestors)
+            for block in self._get_locked_blocks():
+                if block in ancestors:
+                    continue
+                if is_injected and not any(isinstance(a, p.InjectedNode) for a in block.parents):
+                    # If block is injected, then should not be blocked by main execution path. 
+                    continue
+                logger.debug(f"Block {node.key} could not acquire lock, {block.key} holds it")
+                return
             node.lock_acquired = True
 
         if node.completed:
@@ -505,7 +510,8 @@ class PInterpreter(NodeVisitor):
         old_block: p.BlockNode | None = None
         new_block: p.BlockNode | None = None
 
-        locked_blocks = self._program.get_locked_blocks()
+        locked_blocks = self._get_locked_blocks()
+
         locked_block_keys = [b.key for b in locked_blocks]
         logger.debug("Locked blocks: " + '\n'.join(locked_block_keys))
         if len(locked_blocks) == 0:
@@ -541,7 +547,7 @@ class PInterpreter(NodeVisitor):
 
 
     def visit_EndBlocksNode(self, node: p.EndBlocksNode) -> NodeGenerator:
-        locked_blocks = self._program.get_locked_blocks()
+        locked_blocks = self._get_locked_blocks()
         locked_block_keys = [b.key for b in locked_blocks]
         self.tracking.mark_started(node)
         logger.debug("Locked blocks: " + ', '.join(locked_block_keys))
@@ -975,13 +981,37 @@ class PInterpreter(NodeVisitor):
         """
         if any(isinstance(parent, p.BlockNode) and parent.block_ended for parent in node.parents):
             return True
-        for node_id in self.sep.node_ids():   
-            n = self.get_node_by_id(node_id)
+        for node_id in self.sep.node_ids(): 
+            n = self.tracking.get_known_node_by_id(node_id)
             if isinstance(n, p.BlockNode) and n.block_ended:
                 return True
             if n is not None and any(isinstance(parent, p.BlockNode) and parent.block_ended for parent in n.parents):
                 return True
         return False
+    
+    def _current_execution_root(self) -> p.NodeWithChildren:
+        """Returns the root of the current execution path."""
+        if self._sep is self.main_sep:
+            return self._program
+        for it in self._interrupts_map.values():
+            if it.sep is self._sep:
+                n: p.Node | None = it.node
+                while n is not None:
+                    if isinstance(n, p.InjectedNode):
+                        return n
+                    n = n.parent
+                return self._program
+        return self._program
+
+    def _get_locked_blocks(self) -> list[p.BlockNode]:
+        root = self._current_execution_root()
+        own = [b for b in root.get_locked_blocks()]
+        if root is self._program:
+            return own
+        own_ids = {b.id for b in own}
+        outer = [b for b in self._program.get_locked_blocks()
+                if b.id not in own_ids]
+        return own + outer
 
     def _is_awaiting_threshold(self, node: p.Node):
         if node.completed:

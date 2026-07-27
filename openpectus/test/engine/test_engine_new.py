@@ -584,3 +584,67 @@ Stop
         with runner.run() as instance:
             instance.start()
             instance.run_until_event("stop")  # will raise on engine error
+
+    def test_inject_block(self):
+        pcode = """
+Base: s
+"""
+        runner = EngineTestRunner(create_test_uod, pcode)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_ticks(10)
+
+            instance.engine.inject_code("""
+Block:
+    Mark: M1
+    1.0 End block:
+Mark: M2""")
+            instance.run_ticks(20)
+            self.assertEqual(instance.marks, ['M1', 'M2'])
+
+    def test_inject_block_with_nested_blocks(self):
+        pcode = """
+Base: s
+
+Block: 
+    Mark: M1
+    1.0 Mark: M2
+    End block:
+Mark: M5
+"""
+        runner = EngineTestRunner(create_test_uod, pcode)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_until_instruction("Mark", state="completed", arguments="M1")
+
+            instance.engine.inject_code("""
+Block: 
+    Mark: M3
+    Block:
+        Mark: M4
+        End block:
+    End block:                                   
+""")
+            instance.run_ticks(30)
+            self.assertEqual(instance.marks, ['M1', 'M3', 'M4', 'M2', 'M5'])
+
+
+    def test_inject_block_with_end_block_from_watch(self):
+        pcode = """
+"""
+        runner = EngineTestRunner(create_test_uod, pcode)
+        with runner.run() as instance:
+            instance.start()
+
+            instance.engine.inject_code("""
+Base: s
+Watch: Block Time > 0.7 s
+    End block:
+Block:
+    Mark: A
+    1.0 Mark: C
+Mark: B
+""")
+            instance.run_ticks(30)
+            self.assertEqual(instance.marks, ['A', 'B'])
+
