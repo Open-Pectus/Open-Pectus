@@ -91,6 +91,8 @@ The Engine executes commands, runs methods and handles I/O with the Unit Operati
 
 Engines are decentralized and register with the central aggregator without prior configuration of the aggregator thus forming a de-centralized structure.
 
+The internals of an Engine — the scan cycle, state flags, and how the P-code interpreter and command manager cooperate — are described in the :ref:`engine-runtime` section.
+
 P-code Language
 ---------------
 
@@ -193,24 +195,42 @@ A Unit Operation Definition contains the following:
 * Mapping of process value tags to physical I/O
 * Unit Operation specific instructions
 
-Engine
-------
-The Engine connects with the Unit Operation I/O and executes instructions.
-The state of the engine is defined by the following parameters:
+.. _engine-runtime:
 
-* | Execute instructions flag (binary)
-  | Toggles execution of instructions and progress of the method.
+Engine Runtime
+--------------
+The Engine is the runtime that ties the hardware together with the P-code interpreter. 
+It does this by running an internal scan cycle, which reads hardware, 
+advances the method in the interpreter, executes commands through the CommandManager,
+and writes back to the hardware. The engine has the following states:
 
-* | Pause flag (binary)
-  | Inhibits execution of instructions, progress of the method, injection of instructions and forces output of pre-defined safe values to I/O.
+* | Start/Stop: 
+  | Toggles execution of instruction, progression of the P-code, and output writes to hardware. 
 
-* | Hold flag (binary)
-  | Inhibits progress of the loaded method as well as injection of instructions.
+* | Pause:
+  | Inhibits execution of instructions, progress of the method and forces output of pre-defined safe values to I/O.
 
-* | Running Instructions (list of instructions)
-  | List of instructions which are executed during a scan cycle. Instructions can be added to this list by the operator or by execution of the method. Instructions disappear from the list when their "completed"-flag is set.
+* | Hold:
+  | Inhibits progress of the loaded method, but leaves outputs unchanged.
 
-When the engine is launched it continuously performs a scan cycle. The scan cycle is depicted in :numref:`engine-scan-cycle` and :numref:`execute-instructions`.
+* | Stopping:
+  | Set when gracefully stopping. Inhibits interpreter progress until stop completes.
+
+* | Error state:
+  | Set when interpreter, hardware or command error occurs. Also transitions the system to Pause.
+
+Running instructions
+""""""""""""""""""""
+The CommandManager maintains a queue of scheduled commands and a list of commands currently executing. 
+Commands are added either by the code running in the interpreter or by the operator, 
+and are removed when they signal completion or failure.
+
+Commands are continuously executed in a PLC-style scan cycle. The scan cycle runs at a fixed cadence (default 100 ms),
+also called one tick, and is split into four phases: hardware input registers are read into tags, 
+the interpreter is advanced by one tick, the CommandManager ticks every running command, 
+and finally subscribers are notified of tag changes and output tags are written back to hardware.
+
+The state flags described above act as gates within the cycle, deciding what runs on each tick. This is further depicted in :numref:`engine-scan-cycle` and :numref:`execute-instructions`.
 
 .. _engine-scan-cycle:
 .. mermaid:: mermaid/engine_scan_cycle.mdd
