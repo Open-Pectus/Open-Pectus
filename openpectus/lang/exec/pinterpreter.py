@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Iterable, Sequence
 import uuid
-from typing_extensions import override
+from typing_extensions import final, override
 
 from openpectus.lang.exec.argument_specification import ArgSpec
 from openpectus.lang.exec.events import EventEmitter
@@ -221,32 +221,34 @@ class PInterpreter(NodeVisitor):
         # create instance_id for every visit to support recurring visits from
         # alarm/macro nodes and their child nodes
         self.tracking.create_node_instance_id(node)
-
-        if not node.started and not node.completed:
-            if self._is_awaiting_threshold(node):
-                self.tracking.mark_awaiting_threshold(node)
-
-            while self._is_awaiting_threshold(node):
-                yield VisitResult.EndTick
-
-        # threshold has passed
-        node.started = True
-        self.sep.push(node)
-
         try:
-            result = super().visit(node)
-            yield from result
-        except Exception as ex:
-            node.failed = True
-            self._last_error = ex, node
+            if not node.started and not node.completed:
+                if self._is_awaiting_threshold(node):
+                    self.tracking.mark_awaiting_threshold(node)
 
-        self.sep.pop()
+                while self._is_awaiting_threshold(node):
+                    if self._is_in_ended_block(node): 
+                        return
+                    yield VisitResult.EndTick
 
-        record = self.runtimeinfo.get_record_by_node(node.id)
-        assert record is not None
-        record.set_end_visit(  # why this and not tracking?
-            self._tick_time, self._tick_number,
-            self.context.tags.as_readonly())
+            # threshold has passed
+            node.started = True
+            self.sep.push(node)
+
+            try:
+                result = super().visit(node)
+                yield from result
+            except Exception as ex:
+                node.failed = True
+                self._last_error = ex, node
+
+            self.sep.pop()
+        finally:
+            record = self.runtimeinfo.get_record_by_node(node.id)
+            assert record is not None
+            record.set_end_visit(  # why this and not tracking?
+                self._tick_time, self._tick_number,
+                self.context.tags.as_readonly())
 
     @override
     def visit_ProgramNode(self, node: p.ProgramNode) -> NodeGenerator:
@@ -297,17 +299,17 @@ class PInterpreter(NodeVisitor):
             if inx < node.child_index:
                 logger.debug(f"Child node loop for {node.key} skipping {child.key=} because {inx=} < {node.child_index=}")
                 continue
-
-            if isinstance(node, p.BlockNode) and node.block_ended:
-                logger.debug(f"Breaking child visit loop for block {node.key} that has ended. {node.child_index=}")
-                break
+            
+            if self._is_in_ended_block(child):
+                logger.debug(f"Breaking child visit loop on child {child.key} because it is in an ended block")
+                break 
 
             child_result = self.visit(child)
             self.sep.push(node, f"child.{node.child_index}")
             yield from child_result
             self.sep.pop()
             node.child_index += 1
-
+        
         node.children_complete = True
     
 # endregion General visit
@@ -922,7 +924,6 @@ class PInterpreter(NodeVisitor):
             if warn_on_no_registration:
                 logger.warning(f"No interrupt for node id {node.id} was found to unregister")
 
-
     def _abort_block_interrupts(self, block: p.BlockNode):
         logger.debug(f"Cancelling any interrupts for nodes in block '{block}'")
         descendants = block.get_child_nodes(recursive=True)
@@ -968,6 +969,19 @@ class PInterpreter(NodeVisitor):
         if condition_result:
             node.activated = True
 
+    def _is_in_ended_block(self, node: p.Node) -> bool:
+        """ Returns True if any ancestor Block of node has been ended (block_ended).
+            Check both on the parent and the execution path. We cannot just rely on the execution path since, interrupts creates a fresh execution path, but might be situated in a block that has ended.    
+        """
+        if any(isinstance(parent, p.BlockNode) and parent.block_ended for parent in node.parents):
+            return True
+        for node_id in self.sep.node_ids():   
+            n = self.get_node_by_id(node_id)
+            if isinstance(n, p.BlockNode) and n.block_ended:
+                return True
+            if n is not None and any(isinstance(parent, p.BlockNode) and parent.block_ended for parent in n.parents):
+                return True
+        return False
 
     def _is_awaiting_threshold(self, node: p.Node):
         if node.completed:

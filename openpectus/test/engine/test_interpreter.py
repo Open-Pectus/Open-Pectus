@@ -837,6 +837,115 @@ Macro: M
             instance.run_until_instruction("Mark", state="completed", arguments="MB", max_ticks=30)
             self.assertEqual(["MA", "MB"], instance.marks)
 
+    def test_multiple_end_block_on_one_block(self):
+        code = """\
+Base: s
+Watch: Block Time > 0.7 s
+    End block
+Block:
+    Mark: A
+    1.0 End block
+Mark: B
+"""
+
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_ticks(30)
+            self.assertEqual(["A", "B"], instance.marks)
+
+    def test_awaiting_threshold_on_end_block(self):
+        code = """\
+Base: s
+Watch: Block Time > 0.7 s
+    End block
+Block:
+    Mark: A
+    1.0 Mark: C
+Mark: B
+"""
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_ticks(30)
+            self.assertEqual(["A", "B"], instance.marks)
+
+    def test_unfinished_macro_on_end_block(self):
+        code = """\
+Base: s
+
+Macro: M
+    Mark: C
+    Mark: D
+    Mark: E
+    Mark: F
+    Mark: G
+    Mark: H
+    Mark: I
+    Mark: J
+
+Watch: Block Time > 0.8 s
+    End block
+Block:
+    Mark: A
+    Call macro: M
+
+Mark: B
+"""
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_ticks(40)
+            self.assertEqual(["A", "C", "D", "E", "F", "B"], instance.marks)
+
+    def test_unfinished_marks_in_block(self):
+        code = """\
+Base: s
+
+Watch: Block Time > 0.8 s
+    End block
+Block:
+    Mark: A
+    Mark: C
+    Mark: D
+    Mark: E
+    Mark: F
+    Mark: G
+    Mark: H
+    Mark: I
+    Mark: J
+
+Mark: B
+"""
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_ticks(40)
+            #Calling the macro itself should take one tick, so this should do one more operation.
+            self.assertEqual(["A", "C", "D", "E", "F", "G", "B"], instance.marks)
+
+    def test_macro_with_threshold_execution(self):
+        code = """\
+Base: s
+
+Macro: M
+    1.0 Mark: C
+
+Watch: Block Time > 0.8 s
+    End block
+
+Block:
+    Mark: A
+    Call macro: M
+
+Mark: B
+"""
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_ticks(30)
+            self.assertEqual(["A", "B"], instance.marks)
+
 
 if __name__ == "__main__":
     unittest.main()
