@@ -475,13 +475,7 @@ class EngineTestInstance(EventListener):
         if len(self._scopes) == 0:
             logger.error("Scope error. Event scope_end was raised when no scope were active")
             return
-        scope = self._scopes[-1]
-        if scope.node_id != scope_info.node_id or scope.scope_type != scope_info.scope_type or scope.argument != scope_info.argument:
-            logger.error("Scope error. Event scope_end was raised when a different scope was active")
-            logger.error(f"Current scope: {scope}")
-            logger.error(f"Scope to end: {scope_info}")
-        else:
-            self._scopes.pop()
+        self._scopes.remove(scope_info)
 
     def on_tick(self, tick_time: float, increment_time: float):
         pass

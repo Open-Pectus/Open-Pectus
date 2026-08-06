@@ -5,6 +5,7 @@ from enum import StrEnum, auto
 from typing import Any, Callable, Iterable, Set
 import decimal
 
+from openpectus.lang.exec.elementstate import ElementKey, ElementState, HasElementState
 from openpectus.lang.exec.events import EventListener
 from openpectus.lang.exec.units import convert_value_to_unit, is_supported_unit
 
@@ -75,7 +76,7 @@ class ChangeListener:
 
 
 class ChangeSubject:
-    """ Inherit to support change notification. Used by engine to track tag changes """
+    """ Inherit to support change notification. Used by engine to track tag changes. """
 
     def __init__(self) -> None:
         super(ChangeSubject, self).__init__()
@@ -126,7 +127,7 @@ class Unset:
         return f'{self.__class__.__name__}()'
 
 
-class Tag(ChangeSubject, EventListener):
+class Tag(ChangeSubject, EventListener, HasElementState):
     """ Base class for tags. Most tags do not need their own class but can just use this class.
 
     Supports change tracking which is used by engine to detect changes between reads of hardware values.
@@ -134,6 +135,14 @@ class Tag(ChangeSubject, EventListener):
     Supports lifetime notification events that are automatically invoked by the engine.
 
     Supports masking the actual value with a simulated value.
+
+    Supports loading and saving state to support live-edit and crash recovery.
+
+    Note: We don't use 'cooperative multiple inheritance', because it gets too complex to do it correctly in
+    derived classes (see https://stackoverflow.com/a/50465583). Instead, Tag and its base classes handle the
+    particulars, leaving it simple custom tags that devire from Tag.
+
+    See a full example for a custom Tag class in the HasElementState doc-string.
     """
 
     def __init__(
@@ -145,7 +154,6 @@ class Tag(ChangeSubject, EventListener):
             direction: TagDirection = TagDirection.NA,
             format_fn: TagFormatFunction | None = None,
     ) -> None:
-
         super(Tag, self).__init__()
 
         assert name is not None
@@ -253,10 +261,23 @@ class Tag(ChangeSubject, EventListener):
         if self.simulated:
             self.stop_simulation()
         return super().on_stop()
-    
+
     def with_builder(self, builder):
         builder.with_tag(self)
         return self
+
+    @property
+    def element_key(self) -> ElementKey:
+        return ElementKey(namespace="tags", element_id=self.name)
+
+    def apply_state(self, state: ElementState):
+        # consider whether any general Tag state should be used
+        pass
+
+    def extract_state(self) -> ElementState:
+        state = self.element_key.create_element_state()
+        # consider whether any general Tag state should be used
+        return state
 
 
 class TagCollection(ChangeSubject, ChangeListener, Iterable[Tag]):

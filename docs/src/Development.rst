@@ -27,6 +27,7 @@ Ecosystem
 Frontend Setup
 --------------
 .. _download node as a standalone binary: https://nodejs.org/en/download
+
 Prerequisites: Node 22 (LTS) must be installed.
 
 Follow the steps below to install Node 22 on Ubuntu using Node Version Manager.
@@ -55,64 +56,91 @@ Follow the steps below to install packages and build the frontend.
 Backend Setup
 -------------
 .. _Download Miniconda: https://docs.conda.io/en/latest/miniconda.html
+.. _Download uv: https://docs.astral.sh/uv/getting-started/installation/
 .. _Sentry: https://sentry.io
 
-Prerequisites:
+Two environment managers are supported: conda and uv. Pick whichever you prefer;
+both produce a working development environment. All commands are run from the
+:console:`Open-Pectus` folder.
 
-* (Optional) A conda installation is highly recommended although it is possible to do without. `Download Miniconda`_.
+The instructions below install the :console:`development` extra. To set up an
+environment for building the documentation instead, substitute :console:`development`
+with :console:`docs` (see :ref:`documentation-setup`).
 
-All the following commands can only be run from within the conda prompt, and from the `Open-Pectus` folder.
+Using conda
+^^^^^^^^^^^
 
-#. Create a new conda environment and install all dependencies:
+Prerequisite: a conda installation. `Download Miniconda`_.
+
+All the following commands must be run from within the conda prompt.
+
+#. Create a new conda environment and install all dependencies
 
    :console:`conda env create --name openpectus --file=environment.yml`
-   
-   *or*
-   
-   :console:`conda env create --prefix=./conda --file=environment.yml`
-   
 
-#. Activate the created Open Pectus conda environment:
+   *or*
+
+   :console:`conda env create --prefix=./conda --file=environment.yml`
+
+#. Activate the created Open Pectus conda environment
 
    :console:`conda activate openpectus`
-   
+
    *or*
-   
+
    :console:`conda activate ./conda`
 
-#. Install open pectus in the environment:
+#. Install Open Pectus in the environment
 
    :console:`pip install -e ".[development]"`
 
-#. (Optional) Set the :console:`SENTRY_DSN` environment variable:
+Using uv
+^^^^^^^^
 
-   To enable the Sentry_ logger, the :console:`SENTRY_DSN` environment variable needs to be set.
-   Save the value as an environment variable on your developer pc:
+Prerequisite: a uv installation. `Download uv`_.
 
-   :console:`setx SENTRY_DSN value`
+#. Pin the Python version for the project (only needed once)
 
+   :console:`uv python pin 3.13`
+
+#. Create the virtual environment and install all dependencies
+
+   :console:`uv sync --extra development`
+
+   This creates :console:`.venv/` in the repository root and installs the pinned
+   dependencies from :console:`pyproject.toml`.
+
+#. Activate the environment
+
+   :console:`.venv\Scripts\Activate.ps1` on Windows
+
+   :console:`source .venv/bin/activate` on Linux
+
+Sentry (optional, both setups)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To enable the Sentry_ logger, the :console:`SENTRY_DSN` environment variable needs to be
+set. Save the value as an environment variable on your developer pc:
+
+:console:`setx SENTRY_DSN value`
+
+.. _documentation-setup:
 
 Documentation Setup
 -------------------
-#. Create a new conda environment and install all dependencies:
 
-   :console:`conda env create --name openpectus --file=environment.yml`
-   
-   *or*
-   
-   :console:`conda env create --prefix=./conda --file=environment.yml`
+Set up an environment as described in `Backend Setup`_, but install the
+:console:`docs` extra instead of :console:`development`:
 
-#. Activate the created Open Pectus conda environment:
+* With conda: :console:`pip install -e ".[docs]"` (after activating the environment)
+* With uv: :console:`uv sync --extra docs`
 
-   :console:`conda activate openpectus`
-   
-   *or*
-   
-   :console:`conda activate ./conda`
+Then build the docs. These steps are identical regardless of environment manager:
 
-#. Install open pectus in the environment:
-
-   :console:`pip install -e ".[docs]"`
+.. note::
+   On Windows PowerShell, scripts in the current directory are not on :console:`PATH` by
+   default. Prefix :console:`make.bat` invocations with :console:`.\\`, e.g.
+   :console:`.\\make.bat html` and :console:`.\\make.bat spelling`.
 
 #. Change directory to the docs directory
 
@@ -125,13 +153,13 @@ Documentation Setup
 #. (Optional) Spell check
 
    :console:`make.bat spelling` on Windows
-   
+
    :console:`make spelling` on Linux
 
 #. Build documentation
 
    :console:`make.bat html` on Windows
-   
+
    :console:`make html` on Linux
 
 The built documentation is in :console:`docs/html`.
@@ -148,6 +176,14 @@ To update an existing conda environment with all dependencies (e.g. when :consol
 .. code-block:: console
 
    conda env update -p=./conda --file=environment.yml --prune
+
+Update uv environment
+^^^^^^^^^^^^^^^^^^^^^
+To update an existing uv environment after :console:`pyproject.toml` has changed:
+
+.. code-block:: console
+
+   uv sync --extra development
 
 Build Distribution
 ^^^^^^^^^^^^^^^^^^
