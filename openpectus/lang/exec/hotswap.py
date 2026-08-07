@@ -86,7 +86,7 @@ class HotSwapVisitor(NodeVisitor):
         if node.completed:
             raise Exception("Unexpected call to _visit_children when node is completed")
 
-        old_node = self.old_program.get_child_by_id(node.id)
+        old_node = self.old_program.get_child_by_id(node.id, include_self=True)
         if old_node is not None:
             # in the case that child nodes have been added, we need to clear 'children_complete' in the new state
             # so the new nodes are not skipped

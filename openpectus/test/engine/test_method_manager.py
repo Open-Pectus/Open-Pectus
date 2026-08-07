@@ -129,14 +129,10 @@ class TestMethodManager(unittest.TestCase):
             "test_macro_edit_2_revisions_2",
 
             # issue #864
-            "test_edit_fails_when_watch_body_is_executing",
+            #"test_edit_fails_when_watch_body_is_executing",
 
             # issue #842
-            "test_block_is_rerun_after_edit",
-
-            # crash, discovered during #842
-            #"test_block_edit_crash",
-
+            #"test_block_is_rerun_after_edit",
 
             "test_edit_injected",
 
@@ -1110,7 +1106,7 @@ Watch: Run counter > 0
             instance.engine.set_method(method2)
 
     def test_block_is_rerun_after_edit(self):
-        # Previously executed block is re-run after edit #842
+        # Previously executed block is re-run after edit #842, also covers crash found during that issue
 
         # issue seems to be that ProgramNode.children_completed is set so Block: B never starts
         method1 = Method.from_numbered_pcode("""\
@@ -1145,33 +1141,6 @@ Watch: Run counter > 0
             #instance.run_until_instruction("End block", state="completed")
             self.assertEqual(["B"], instance.marks)
 
-    def test_block_edit_crash(self):
-        # test for edit crash found during #842
-        method1 = Method.from_numbered_pcode("""\
-01 Block: A
-02     Mark: A
-03     Wait: 1 s
-04     End block
-05 
-""")
-        method2 = Method.from_numbered_pcode("""\
-01 Block: A
-02     Mark: A
-03     Wait: 1 s
-04     End block
-05 
-06 Block: B
-07     Mark: B
-08     Wait: 2 s
-09     End block
-10 
-""")
-        runner = create_runner(method1)
-        with runner.run() as instance:
-            instance.start()
-            instance.run_until_instruction("Block", state="completed", arguments="A")
-            self.assertEqual(["A"], instance.marks)
-            instance.engine.set_method(method2)
 
     def test_command_instance_id_2(self):
         # Variation of the above that performs the edit earlier than end-of-method
