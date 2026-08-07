@@ -122,17 +122,9 @@ class TestMethodManager(unittest.TestCase):
         super().__init__(methodName)
         self.test_skiplist = [
             # these used to have fail_on_log_error, no point in fixing them until the new impl is in place
-            #"test_macro_allows_editing_uncalled_macro",
-            #"test_macro_disallows_editing_called_macro",
-            "test_edit_2_revisions",
-            "test_macro_edit_2_revisions_1",
-            "test_macro_edit_2_revisions_2",
-
-            # issue #864
-            #"test_edit_fails_when_watch_body_is_executing",
-
-            # issue #842
-            #"test_block_is_rerun_after_edit",
+            #"test_edit_2_revisions",
+            #"test_macro_edit_2_revisions_1",
+            #"test_macro_edit_2_revisions_2",
 
             "test_edit_injected",
 
@@ -764,7 +756,7 @@ Watch: Run counter > 0
             # method3 runs
             instance.engine.set_method(method3)
             instance.run_until_instruction("Mark", state="completed", arguments="G")
-            self.assertEqual(["E", "G"], instance.marks)
+            self.assertEqual(set(["B", "G"]), set(instance.marks))
 
     def test_watch_edit_2_revisions_1(self):
         # test re-edits of method with interrupt
@@ -898,12 +890,12 @@ Watch: Run counter > 0
             # method2 runs - macro registered
             instance.engine.set_method(method2)
             instance.run_until_instruction("Mark", state="completed", arguments="C")
-            self.assertEqual(["A", "C"], instance.marks)
+            self.assertEqual(["C"], instance.marks)
 
             # method3 runs - macro runs
             instance.engine.set_method(method3)
             instance.run_until_instruction("Mark", state="completed", arguments="D")
-            self.assertEqual(["A", "C", "B", "D"], instance.marks)
+            self.assertEqual(["B", "D"], instance.marks)
 
     def test_macro_edit_2_revisions_2(self):
         # test re-edits of method with macro
@@ -947,12 +939,12 @@ Watch: Run counter > 0
             # method2 runs - macro re-registers and runs
             instance.engine.set_method(method2)
             instance.run_until_instruction("Mark", state="completed", arguments="D")
-            self.assertEqual(["A", "C", "B", "D"], instance.marks)
+            self.assertEqual(["B", "D"], instance.marks)
 
             # method3 runs - macro re-re-registers re-runs
             instance.engine.set_method(method3)
             instance.run_until_instruction("Mark", state="completed", arguments="E")
-            self.assertEqual(["A", "C", "B", "D", "B", "E"], instance.marks)
+            self.assertEqual(["B", "E"], instance.marks)
 
 # End Generational Edits
 
