@@ -35,11 +35,14 @@ class MethodManager:
         self._interpreter_reset_handler = interpreter_reset_handler
         self._interpreter: PInterpreter = self._create_interpreter(self._program)
 
-    def _create_interpreter(self, program: p.ProgramNode, raise_change_event=True) -> PInterpreter:
+    def _create_interpreter(self, program: p.ProgramNode, raise_change_event=True, runtime_info: RuntimeInfo | None = None) -> PInterpreter:
         tracking_was_enabled = False
         if hasattr(self, "_interpreter"):
             tracking_was_enabled = self._interpreter.tracking.enabled if self._interpreter is not None else False
-        interpreter = PInterpreter(program, self._interpreter_context, RuntimeInfo(), tracking_was_enabled)
+
+        if runtime_info is None:
+            runtime_info = RuntimeInfo()
+        interpreter = PInterpreter(program, self._interpreter_context, runtime_info, tracking_was_enabled)
         if raise_change_event:
             self._interpreter_reset_handler(interpreter)
         return interpreter
@@ -52,7 +55,10 @@ class MethodManager:
 
         self._apply_analysis(program)
 
-        instance = self._create_interpreter(program, raise_change_event=raise_change_event)
+        # TODO use runtime_state - should be exported and imported as part of InterpreterState and given to PInterpreter ctor
+        # fix with #939
+        runtime_info = self._interpreter.runtimeinfo
+        instance = self._create_interpreter(program, raise_change_event=raise_change_event, runtime_info=runtime_info)
 
         # Apply the state to all nodes. In case of merge, the state has been patched by the hotswap visitor.
         logger.debug("Applying program state")
@@ -68,8 +74,11 @@ class MethodManager:
         for interrupt_state in state.interrupt_states:
             node = instance._program.get_child_by_id(interrupt_state.node_id)
             if node is None:
-                logger.error(f"Interrupt for node_id {interrupt_state.node_id} cannot be recreated. Node was not found")
-                continue
+                logger.debug(f"interrupt node '{interrupt_state.node_id}' was not found in target program. Falling back to tracking known node")
+                node = instance.tracking.get_known_node_by_id(interrupt_state.node_id)
+                if node is None:
+                    logger.error(f"Interrupt for node_id {interrupt_state.node_id} cannot be recreated. Node was not found")
+                    continue
             # interrupt_state.sep - what to do?
             if not isinstance(node, p.NodeWithChildren):
                 logger.error(f"Interrupt for node_id {interrupt_state.node_id} cannot be recreated." +

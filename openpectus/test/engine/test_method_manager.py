@@ -118,28 +118,6 @@ def create_runner(method: str | Method, fail_on_log_error=True):
 
 class TestMethodManager(unittest.TestCase):
 
-    def __init__(self, methodName="runTest"):
-        super().__init__(methodName)
-        self.test_skiplist = [
-            # these used to have fail_on_log_error, no point in fixing them until the new impl is in place
-            #"test_edit_2_revisions",
-            #"test_macro_edit_2_revisions_1",
-            #"test_macro_edit_2_revisions_2",
-
-            "test_edit_injected",
-
-            # these fail because of changing _visit_children to use node.child_index
-            # there is no obvious reason for this - could just be a bug
-            "test_watch_edit_2_revisions_1",
-            "test_watch_edit_2_revisions_2",
-        ]
-        #self.test_skiplist.clear()
-
-    def setUp(self):
-        if self._testMethodName in self.test_skiplist:
-            self.skipTest("Test is in skiplist")
-        return super().setUp()
-
     def test_may_not_edit_an_executed_line(self):
         runner = create_runner("01 Mark: A", fail_on_log_error=False)
         with runner.run() as instance:
@@ -244,7 +222,7 @@ class TestMethodManager(unittest.TestCase):
             instance.run_until_event("method_end")
 
             # verify run behavior
-            self.assertEqual(["B", "C"], instance.marks)
+            self.assertEqual(["B", "C"], instance.marks_latest)
 
     def test_may_edit_line_after_started_line(self):
         method1 = Method.from_numbered_pcode("""\
@@ -262,13 +240,13 @@ class TestMethodManager(unittest.TestCase):
         with runner.run() as instance:
             instance.start()
             instance.run_until_instruction("Mark", state="completed", arguments="A")
-            self.assertEqual(["A"], instance.marks)
+            self.assertEqual(["A"], instance.marks_latest)
 
             # verify no edit error
             instance.engine.set_method(method2)
 
             instance.run_until_instruction("Info", state="completed", arguments="C")
-            self.assertEqual([], instance.marks)
+            self.assertEqual([], instance.marks_latest)
 
     def test_may_extend_block_after_block_started(self):
 
@@ -293,7 +271,7 @@ class TestMethodManager(unittest.TestCase):
             instance.run_until_instruction("Mark", state="completed", arguments="C")
 
             # verify run behavior
-            self.assertEqual(["C"], instance.marks)
+            self.assertEqual(["C"], instance.marks_latest)
 
 
     def test_extended_block_does_end(self):
@@ -327,7 +305,7 @@ class TestMethodManager(unittest.TestCase):
             instance.run_ticks(5)
 
             # verify run behavior
-            self.assertEqual(["B"], instance.marks)
+            self.assertEqual(["B"], instance.marks_latest)
 
             # verify that block execution has completed
             self.assertEqual(None, block_tag.get_value())
@@ -364,7 +342,7 @@ class TestMethodManager(unittest.TestCase):
             instance.run_until_instruction("Mark", state="completed", arguments="D")
 
             # verify run behavior
-            self.assertEqual(["C", "D"], instance.marks)
+            self.assertEqual(["C", "D"], instance.marks_latest)
 
 
     def test_may_extend_alarm_after_alarm_activated(self):
@@ -398,13 +376,13 @@ class TestMethodManager(unittest.TestCase):
             instance.run_until_instruction("Mark", state="completed", arguments="D")
 
             # verify run behavior
-            self.assertEqual(["C", "D"], instance.marks)
+            self.assertEqual(["C", "D"], instance.marks_latest)
 
             # verify alarm is repeated
             alarm_node = instance.method_manager.program.get_first_child(p.AlarmNode)
             assert alarm_node is not None
             instance.run_until_condition(lambda: alarm_node.run_count == 2, max_ticks=50)
-            self.assertEqual(["C", "D", "B", "C", "D"], instance.marks)
+            self.assertEqual(["C", "D", "B", "C", "D"], instance.marks_latest)
 
 
     @unittest.skip("poorly defined semantics of nested interrupts")
@@ -442,7 +420,7 @@ class TestMethodManager(unittest.TestCase):
             instance.run_until_instruction("Mark", state="completed", arguments="D")
 
             # verify run behavior
-            self.assertEqual(["C", "B", "D"], instance.marks)
+            self.assertEqual(["C", "B", "D"], instance.marks_latest)
 
 
     def test_may_extend_alarm(self):
@@ -470,13 +448,13 @@ class TestMethodManager(unittest.TestCase):
             instance.run_until_instruction("Mark", state="completed", arguments="D")
 
             # verify run behavior
-            self.assertEqual(["C", "D"], instance.marks)
+            self.assertEqual(["C", "D"], instance.marks_latest)
 
             # verify alarm is repeated
             alarm_node = instance.method_manager.program.get_first_child(p.AlarmNode)
             assert alarm_node is not None
             instance.run_until_condition(lambda: alarm_node.run_count == 2)
-            self.assertEqual(["C", "D", "B", "C", "D"], instance.marks)
+            self.assertEqual(["C", "D", "B", "C", "D"], instance.marks_latest)
 
     def test_may_edit_blank_to_other_instruction(self):
         # When editing the last line, it is interpreted as an edited node type. This type of edit
@@ -498,13 +476,13 @@ class TestMethodManager(unittest.TestCase):
             # This means we should only test on such data
 
             instance.run_until_instruction("Mark", "completed", arguments="A")
-            instance.run_ticks(2)
 
             # verify no edit error
-            instance.engine.set_method(method2)
+            op = instance.engine.set_method(method2)
+            assert op == "merge_method"
 
             instance.run_until_instruction("Mark", "completed", arguments="B")
-            self.assertEqual(["B"], instance.marks)
+            self.assertEqual(["B"], instance.marks_latest)
 
 
     def test_may_edit_blank_to_other_instruction_in_watch(self):
@@ -541,7 +519,7 @@ class TestMethodManager(unittest.TestCase):
 
             instance.run_until_instruction("Watch", "completed")
 
-            self.assertEqual(["C"], instance.marks)
+            self.assertEqual(["C"], instance.marks_latest)
 
     @unittest.skip(reason="Not yet implemented")
     def test_may_not_add_instruction_text_in_empty_lines(self):
@@ -587,7 +565,7 @@ class TestMethodManager(unittest.TestCase):
 
             # method2 runs
             instance.run_until_instruction("Mark", state="completed", arguments="D")
-            self.assertEqual(["B", "D"], instance.marks)
+            self.assertEqual(["B", "D"], instance.marks_latest)
 
     def test_macro_disallows_editing_called_macro(self):
 
@@ -746,17 +724,17 @@ Watch: Run counter > 0
         with runner.run() as instance:
             instance.start()
             instance.run_until_instruction("Wait", state="completed")
-            self.assertEqual([], instance.marks)
+            self.assertEqual([], instance.marks_latest)
 
             # method2 runs
             instance.engine.set_method(method2)
             instance.run_until_instruction("Mark", state="completed", arguments="E")
-            self.assertEqual(["E"], instance.marks)
+            self.assertEqual(["E"], instance.marks_latest)
 
             # method3 runs
             instance.engine.set_method(method3)
             instance.run_until_instruction("Mark", state="completed", arguments="G")
-            self.assertEqual(set(["B", "G"]), set(instance.marks))
+            self.assertEqual(set(["B", "G"]), set(instance.marks_latest))
 
     def test_watch_edit_2_revisions_1(self):
         # test re-edits of method with interrupt
@@ -790,17 +768,17 @@ Watch: Run counter > 0
 
             # method1 runs - watch interrupt registeret
             instance.run_until_instruction("Mark", state="completed", arguments="B")
-            self.assertEqual(["B"], instance.marks)
+            self.assertEqual(["B"], instance.marks_latest)
 
             # method2 runs - watch interrupt executed
             instance.engine.set_method(method2)
             instance.run_until_instruction("Mark", state="completed", arguments="D")
-            self.assertEqual(["B", "A", "D"], instance.marks)
+            self.assertEqual(["A", "D"], instance.marks_latest)
 
-            # method3 runs - does nothing
+            # method3 runs - does not rerun interrupt
             instance.engine.set_method(method3)
             instance.run_until_instruction("Mark", state="completed", arguments="E")
-            self.assertEqual(["B", "A", "D", "E"], instance.marks)
+            self.assertEqual(["E"], instance.marks_latest)
 
     def test_watch_edit_2_revisions_2(self):
         # test re-edits of method with interrupt
@@ -837,17 +815,17 @@ Watch: Run counter > 0
 
             # method1 runs - watch interrupt not registeret
             instance.run_until_instruction("Mark", state="completed", arguments="A")
-            self.assertEqual(["A"], instance.marks)
+            self.assertEqual(["A"], instance.marks_latest)
 
             # method2 runs - watch interrupt registered during ffw
             instance.engine.set_method(method2)
             instance.run_until_instruction("Mark", state="completed", arguments="C")
-            self.assertEqual(["A", "C"], instance.marks)
+            self.assertEqual(["C"], instance.marks_latest)
 
             # method3 runs - watch interrupt executed
             instance.engine.set_method(method3)
             instance.run_until_instruction("Mark", state="completed", arguments="E")
-            self.assertEqual(["A", "C", "B", "E"], instance.marks)
+            self.assertEqual(["B", "E"], instance.marks_latest)
 
 
     def test_macro_edit_2_revisions_1(self):
@@ -885,17 +863,17 @@ Watch: Run counter > 0
 
             # method1 runs - nothing
             instance.run_until_instruction("Mark", state="completed", arguments="A")
-            self.assertEqual(["A"], instance.marks)
+            self.assertEqual(["A"], instance.marks_latest)
 
             # method2 runs - macro registered
             instance.engine.set_method(method2)
             instance.run_until_instruction("Mark", state="completed", arguments="C")
-            self.assertEqual(["C"], instance.marks)
+            self.assertEqual(["C"], instance.marks_latest)
 
             # method3 runs - macro runs
             instance.engine.set_method(method3)
             instance.run_until_instruction("Mark", state="completed", arguments="D")
-            self.assertEqual(["B", "D"], instance.marks)
+            self.assertEqual(["B", "D"], instance.marks_latest)
 
     def test_macro_edit_2_revisions_2(self):
         # test re-edits of method with macro
@@ -934,17 +912,17 @@ Watch: Run counter > 0
 
             # method1 runs - macro registered
             instance.run_until_instruction("Mark", state="completed", arguments="C")
-            self.assertEqual(["A", "C"], instance.marks)
+            self.assertEqual(["A", "C"], instance.marks_latest)
 
             # method2 runs - macro re-registers and runs
             instance.engine.set_method(method2)
             instance.run_until_instruction("Mark", state="completed", arguments="D")
-            self.assertEqual(["B", "D"], instance.marks)
+            self.assertEqual(["B", "D"], instance.marks_latest)
 
             # method3 runs - macro re-re-registers re-runs
             instance.engine.set_method(method3)
             instance.run_until_instruction("Mark", state="completed", arguments="E")
-            self.assertEqual(["B", "E"], instance.marks)
+            self.assertEqual(["B", "E"], instance.marks_latest)
 
 # End Generational Edits
 
@@ -971,12 +949,12 @@ Watch: Run counter > 0
             instance.engine.inject_code("Mark: A2")
             instance.run_until_instruction("Mark", state="completed", arguments="C")
 
-            self.assertEqual(['A', 'B', 'A2', 'C'], instance.marks)
+            self.assertEqual(['A', 'B', 'A2', 'C'], instance.marks_latest)
 
             instance.engine.set_method(method2)
             instance.run_until_instruction("Mark", state="completed", arguments="D")
 
-            self.assertEqual(['A', 'B', 'A2', 'C', 'D'], instance.marks)
+            self.assertEqual(['D'], instance.marks_latest)
 
     def test_wait(self):
         method1 = Method.from_numbered_pcode("""\
@@ -1124,14 +1102,14 @@ Watch: Run counter > 0
         with runner.run() as instance:
             instance.start()
             instance.run_until_instruction("Block", state="completed", arguments="A")
-            self.assertEqual(["A"], instance.marks)
+            self.assertEqual(["A"], instance.marks_latest)
 
             op = instance.engine.set_method(method2)
             self.assertEqual(op, "merge_method")
 
             instance.run_until_instruction("Block", state="completed", arguments="B", max_ticks=50)
             #instance.run_until_instruction("End block", state="completed")
-            self.assertEqual(["B"], instance.marks)
+            self.assertEqual(["B"], instance.marks_latest)
 
 
     def test_command_instance_id_2(self):
@@ -1191,7 +1169,7 @@ Watch: Run counter > 0
             # but the previous interpreter can still continue
             self.assertEqual(0, instance.method_manager.program.version)
             instance.run_until_instruction("Mark", arguments="C", state="completed")
-            self.assertEqual(['A', 'B', 'C'], instance.marks)
+            self.assertEqual(['A', 'B', 'C'], instance.marks_latest)
 
 # Resume after error
 
@@ -1242,6 +1220,6 @@ Watch: Run counter > 0
             instance.engine.schedule_execution(EngineCommandEnum.UNPAUSE)
 
             instance.run_until_instruction("Watch", "completed")
-            self.assertEqual(['A'], instance.marks)
+            self.assertEqual(['A'], instance.marks_latest)
 
 # End Resume after error

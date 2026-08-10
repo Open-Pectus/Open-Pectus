@@ -144,6 +144,7 @@ class EngineTestInstance(EventListener):
         # register as listener for lifetime events, so these events can be awaited in the tests
         self.add_event_listener(self)
         self._last_event: EventName | None = None
+        self._last_edit = time.time()
         self._scopes = ScopeCollection()
         self._scope_history: list[ScopeInfo] = []
 
@@ -164,7 +165,13 @@ class EngineTestInstance(EventListener):
 
     @property
     def marks(self) -> list[str]:
+        """ Get all marks """
         return self.engine.interpreter.get_marks()
+
+    @property
+    def marks_latest(self) -> list[str]:
+        """ Get marks since last edit """
+        return self.engine.interpreter.get_marks(self._last_edit)
 
     @property
     def method_manager(self) -> MethodManager:
@@ -494,6 +501,7 @@ class EngineTestInstance(EventListener):
 
     def on_method_edited(self, live_edit: bool):
         self._last_event = "method_edited"
+        self._last_edit = time.time()
         self._search_index = 0
 
     def on_engine_shutdown(self):

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Iterable, Sequence
 import uuid
-from typing_extensions import final, override
+from typing_extensions import override
 
 from openpectus.lang.exec.argument_specification import ArgSpec
 from openpectus.lang.exec.events import EventEmitter
@@ -13,7 +13,7 @@ import openpectus.lang.exec.units as units
 from openpectus.lang.exec.base_unit import BaseUnitProvider
 from openpectus.lang.exec.commands import InterpreterCommandEnum
 from openpectus.lang.exec.errors import (
-    EngineError, InterpretationError, InterpretationInternalError, MethodEditError, NodeInterpretationError
+    EngineError, InterpretationError, InterpretationInternalError, NodeInterpretationError
 )
 from openpectus.lang.exec.runlog import RuntimeInfo, RuntimeRecordStateEnum
 from openpectus.lang.exec.tags import TagCollection, SystemTagName
@@ -93,14 +93,15 @@ class PInterpreter(NodeVisitor):
 
 # endregion Creation Creation and state
 
-    def get_marks(self) -> list[str]:
+    def get_marks(self, newer_than: float | None = None) -> list[str]:
         records: list[tuple[str, int]] = []
         for r in self.runtimeinfo.records:
             if p.MarkNode.is_class_of_name(r.node_class_name):
                 completed_states = [st for st in r.states if st.state_name == RuntimeRecordStateEnum.Completed]
                 for completed_state in completed_states:
-                    end_tick = completed_state.state_tick
-                    records.append((completed_state.arguments, end_tick))
+                    if newer_than is None or completed_state.state_time > newer_than:
+                        end_tick = completed_state.state_tick
+                        records.append((completed_state.arguments, end_tick))
 
         def sort_fn(t: tuple[str, int]) -> int:
             return t[1]
