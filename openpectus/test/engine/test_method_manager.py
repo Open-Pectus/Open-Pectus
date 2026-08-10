@@ -1044,25 +1044,25 @@ Watch: Run counter > 0
             # note how Reset still gets ticked by engine, even though it's water under the bridge for interpreter
             instance.run_until_instruction("Wait", state="completed", arguments="0.6s")
 
-    def test_edit_fails_when_watch_body_is_executing(self):
+    def test_edit_864_watch_executing(self):
         # Method edit fails when a watch body is executing, issue #864
         method1 = Method.from_numbered_pcode("""\
 01 Block: A
 02     Watch: Run Time > 0 s
-03         Wait: 5 s
+03         Wait: 2 s
 04         End block
 05 
-06 Wait: 5 s
+06 Wait: 2 s
 07 
 08 Mark: C
 """)
         method2 = Method.from_numbered_pcode("""\
 01 Block: A
 02     Watch: Run Time > 0 s
-03         Wait: 5 s
+03         Wait: 2 s
 04         End block
 05 
-06 Wait: 5 s
+06 Wait: 2 s
 07 
 08 Mark: XX
 """)
@@ -1071,9 +1071,46 @@ Watch: Run counter > 0
             instance.start()
 
             instance.run_until_instruction("Watch", state="started")
-            instance.run_ticks(1)
 
             instance.engine.set_method(method2)
+
+            instance.run_until_instruction("Mark", state="completed", arguments="XX", max_ticks=50)
+            self.assertEqual(["XX"], instance.marks_latest)
+
+    def test_edit_864_wait_executing(self):
+        # Method edit fails when a watch body is executing, issue #864, original working case still works
+        method1 = Method.from_numbered_pcode("""\
+01 Block: A
+02     Watch: Run Time > 0 s
+03         Wait: 2 s
+04         End block
+05 
+06 Wait: 2 s
+07 
+08 Mark: C
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Block: A
+02     Watch: Run Time > 0 s
+03         Wait: 2 s
+04         End block
+05 
+06 Wait: 2 s
+07 
+08 Mark: XX
+""")
+        runner = create_runner(method1)
+        with runner.run() as instance:
+            instance.start()
+
+            instance.run_until_instruction("Wait", state="started")
+
+            instance.engine.set_method(method2)
+
+            instance.run_until_instruction("Mark", state="completed", arguments="XX", max_ticks=50)
+            self.assertEqual(["XX"], instance.marks_latest)
+
+
 
     def test_block_is_rerun_after_edit(self):
         # Previously executed block is re-run after edit #842, also covers crash found during that issue
