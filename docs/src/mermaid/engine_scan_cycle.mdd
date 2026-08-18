@@ -7,6 +7,6 @@ flowchart TD
     --> G[Write Process Image I/O]
     --> H[Scan finished]
     --> I[Pectus Engine stopped]
-    D -->|False| G
+    D -->|False| H
     H --> B
     style F fill:#fae8dc
