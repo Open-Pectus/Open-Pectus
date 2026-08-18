@@ -97,7 +97,7 @@ class SePath:
         elms = [r.key for r in self._items]
         return " > ".join(elms)
     
-    def node_ids(self) -> List[str]:
+    def node_ids(self) -> list[str]:
         """ Items ordered from outer to inner; duplicates removed keeping first occurrence."""
         result: list[str] = []
         for item in self._items:

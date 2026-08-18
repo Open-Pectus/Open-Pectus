@@ -602,15 +602,14 @@ Mark: M2""")
             instance.run_ticks(20)
             self.assertEqual(instance.marks, ['M1', 'M2'])
 
-    def test_inject_block_with_nested_blocks(self):
+    def test_inject_block_waits_when_main_block_is_locked(self):
         pcode = """
 Base: s
 
 Block: 
     Mark: M1
-    1.0 Mark: M2
+    2.0 Mark: M2
     End block:
-Mark: M5
 """
         runner = EngineTestRunner(create_test_uod, pcode)
         with runner.run() as instance:
@@ -623,11 +622,11 @@ Block:
     Block:
         Mark: M4
         End block:
+    Mark: M5
     End block:                                   
 """)
-            instance.run_ticks(30)
-            self.assertEqual(instance.marks, ['M1', 'M3', 'M4', 'M2', 'M5'])
-
+            instance.run_ticks(35)
+            self.assertEqual(instance.marks, ['M1', 'M2', 'M3', 'M4', 'M5'])
 
     def test_inject_block_with_end_block_from_watch(self):
         pcode = """
@@ -648,3 +647,41 @@ Mark: B
             instance.run_ticks(30)
             self.assertEqual(instance.marks, ['A', 'B'])
 
+    def test_interrupts_from_main_method_should_be_able_to_end_injected_block(self):
+        pcode = """
+Base: s
+Watch: Block Time > 0.7 s
+    End block:
+"""
+        runner = EngineTestRunner(create_test_uod, pcode)
+        with runner.run() as instance:
+            instance.start()
+            instance.run_ticks(5)
+            instance.engine.inject_code("""
+Block:
+    Mark: A
+Mark: B
+""")
+            instance.run_ticks(30)
+            self.assertEqual(instance.marks, ['A', 'B'])
+
+
+    def test_injection_should_be_able_to_end_block_in_another_injection(self):
+        pcode = """
+"""
+        runner = EngineTestRunner(create_test_uod, pcode)
+        with runner.run() as instance:
+            instance.start()
+
+            instance.engine.inject_code("""
+Block:
+    Mark: A
+Mark: B
+""")
+            instance.run_ticks(5)
+
+            instance.engine.inject_code("""
+End block:
+""")
+            instance.run_ticks(30)
+            self.assertEqual(instance.marks, ['A', 'B'])
