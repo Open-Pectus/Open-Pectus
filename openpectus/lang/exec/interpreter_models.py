@@ -8,7 +8,6 @@ import logging
 from openpectus.lang.exec.visitor import NodeGenerator
 import openpectus.lang.model.ast as p
 from openpectus.lang.model.parser import ParserMethod
-from typing import List
 
 logger = logging.getLogger(__name__)
 
