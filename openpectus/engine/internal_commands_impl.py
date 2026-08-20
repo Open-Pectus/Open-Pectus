@@ -69,7 +69,7 @@ class PauseEngineCommand(InternalEngineCommand):
         e = self.engine
         e._runstate_paused = True
         e._system_tags[SystemTagName.SYSTEM_STATE].set_value(SystemStateEnum.Paused, e._tick_time)
-        e._prev_state = e._apply_safe_state()
+        e.apply_safe_state()
         e.emitter.emit_on_runstate_change(RunStateChange.PAUSE)
 
         if duration_end_time is not None:
@@ -102,11 +102,7 @@ class UnpauseEngineCommand(InternalEngineCommand):
         e._system_tags[SystemTagName.SYSTEM_STATE].set_value(sys_state_value, e._tick_time)
 
         # pre-pause values are always applied on unpause, regardless of hold state.
-        if e._prev_state is not None:
-            e._apply_state(e._prev_state)
-            e._prev_state = None
-        else:
-            logger.error("Failed to apply state prior to safe state. Prior state was not available")
+        e.apply_pre_safe_state()
 
         # Note: we currently don't have hold/unhold events to worry about here
         e.emitter.emit_on_runstate_change(RunStateChange.UNPAUSE)
@@ -193,7 +189,7 @@ class StopEngineCommand(InternalEngineCommand):
             #     yield
 
             # e.finalize_all_commands(source_command_name=self.name)
-            e._apply_safe_state()
+            e.apply_safe_state()
 
             logger.debug("All uod commands have completed execution. Stop will now complete.")
             e._runstate_paused = False
