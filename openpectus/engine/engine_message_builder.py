@@ -172,6 +172,28 @@ class EngineMessageBuilder():
             run_id=run_id,
             runlog=Mdl.RunLog(lines=list(map(to_line, runlog.items)))
         )
+    
+    def create_queued_runlog_msg(self) -> EM.QueuedRunLogMsg | None:
+        try:
+            queued = self.engine.tracking.get_queued_runlog()
+        except Exception:
+            logger.error("Failed to build queued runlog", exc_info=True)
+            return None
+        if not queued.items:
+            return None
+
+        def to_line(item: RunLogItem) -> Mdl.RunLogLine:
+            return Mdl.RunLogLine(
+                id="QueuedCommand",
+                command_name=item.name,
+                start=0,
+                end=None,
+                progress=None,
+                start_values=[],
+                end_values=[],
+            )
+
+        return EM.QueuedRunLogMsg(runlog=Mdl.RunLog(lines=list(map(to_line, queued.items))))
 
     def create_error_log_msg(self) -> EM.ErrorLogMsg | None:
         log: Mdl.ErrorLog = Mdl.ErrorLog(entries=[])

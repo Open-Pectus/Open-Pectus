@@ -411,6 +411,7 @@ class EngineRunner(EventListener):
                     self._message_builder.create_method_state_msg(),
                     self._message_builder.create_error_log_msg(),
                     self._message_builder.create_tag_updates_msg(self.run_id),
+                    self._message_builder.create_queued_runlog_msg(), 
                 ]
                 if self.run_id is not None:
                     messages.append(self._message_builder.create_runlog_msg(self.run_id))

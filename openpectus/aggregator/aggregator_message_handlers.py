@@ -20,6 +20,7 @@ class AggregatorMessageHandlers:
         aggregator.dispatcher.set_message_handler(EM.UodInfoMsg, self.handle_UodInfoMsg)
         aggregator.dispatcher.set_message_handler(EM.TagsUpdatedMsg, self.handle_TagsUpdatedMsg)
         aggregator.dispatcher.set_message_handler(EM.RunLogMsg, self.handle_RunLogMsg)
+        aggregator.dispatcher.set_message_handler(EM.QueuedRunLogMsg, self.handle_QueuedRunLogMsg)
         aggregator.dispatcher.set_message_handler(EM.ControlStateMsg, self.handle_ControlStateMsg)
         aggregator.dispatcher.set_message_handler(EM.MethodStateMsg, self.handle_MethodStateMsg)
         aggregator.dispatcher.set_message_handler(EM.ErrorLogMsg, self.handle_ErrorLogMsg)
@@ -131,6 +132,13 @@ The engine may not be compatible with the current Aggregator, version {__version
 
         logger.debug(f"Got run log from client: {str(msg)}")
         self.aggregator.from_engine.runlog_changed(msg.engine_id, msg.run_id, msg.runlog)
+        return AM.SuccessMessage()
+    
+    async def handle_QueuedRunLogMsg(self, msg: EM.QueuedRunLogMsg) -> AM.SuccessMessage | AM.ErrorMessage:
+        validation_errors = self.validate_msg(msg)
+        if validation_errors is not None:
+            return validation_errors
+        self.aggregator.from_engine.queued_runlog_changed(msg.engine_id, msg.runlog)
         return AM.SuccessMessage()
 
     async def handle_ControlStateMsg(self, msg: EM.ControlStateMsg) -> AM.SuccessMessage | AM.ErrorMessage:
