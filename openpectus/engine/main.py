@@ -205,7 +205,7 @@ def validate_and_exit(uod_name: str):
         logger.error("Offline validation failed", exc_info=True)
         sys.exit(1)
 
-    run_example_commands(uod)
+    run_example_commands(uod, uod_name)
 
     logger.info("Running online hardware validation")
     try:
@@ -226,15 +226,21 @@ def validate_and_exit(uod_name: str):
     sys.exit(0)
 
 
-def run_example_commands(uod: UnitOperationDefinitionBase):
-    uod.build_commands()
+def run_example_commands(uod: UnitOperationDefinitionBase, uod_filepath: str):
     logger.info("Validating UOD command examples")
-    uod.hwl = NullHardware()
 
-    def run_example_with_description(description: str, example: str) -> list[str]:
+    def run_example_with_description(description: str, example: str, uod_filepath: str) -> list[str]:
         failed_cmds: list[str] = []
         try:
-            runner = EngineTestRunner(uod_argument=copy.deepcopy(uod), method=example)
+            def factory() -> UnitOperationDefinitionBase:
+                uod = create_uod(uod_filepath)
+                uod.system_tags = create_system_tags()
+                uod.validate_configuration()
+                uod.build_commands()
+                uod.hwl = NullHardware()
+                return uod
+
+            runner = EngineTestRunner(uod_argument=factory(), method=example)
             with runner.run() as instance:
                 instance.start()
                 # wait up to 1 minute, that ought to be enought for everybody
@@ -251,7 +257,7 @@ def run_example_commands(uod: UnitOperationDefinitionBase):
         failed_cmds: list[str] = list(
           chain.from_iterable(
             pool.map(
-                lambda t: run_example_with_description(t[0], t[1]),
+                lambda t: run_example_with_description(t[0], t[1], uod_filepath),
                 uod.generate_pcode_examples()
             )
           )

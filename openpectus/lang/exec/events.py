@@ -373,3 +373,51 @@ class ScopeInfo:
     node_id: str
     argument: str
     scope_type: ScopeType
+
+    @property
+    def key(self) -> str:
+        return self.node_id + "|" + self.scope_type
+
+
+class ScopeCollection:
+    """ Collection of ScopeInfo scopes. Manages the peculiarity that scopes may mutate slightly but still be 'identical'.
+
+    The argument of a scope may change as the result of a method live-edit. An example is the correction of a mistyped unit
+    in a Watch condition. When corrected, the Watch scope must remain the same for scope events to function properly.
+    """
+    def __init__(self):
+        self._scopes: dict[str, ScopeInfo] = {}
+
+    def __contains__(self, scope: ScopeInfo) -> bool:
+        return scope.key in self._scopes.keys()
+
+    def __len__(self):
+        return len(self._scopes)
+
+    @property
+    def latest_node_id(self) -> str | None:
+        if len(self._scopes) == 0:
+            return None
+        else:
+            last_key = list(self._scopes.keys())[-1]
+            return self._scopes[last_key].node_id
+
+    def append(self, scope: ScopeInfo):
+        existing = self._scopes.get(scope.key)
+        if existing is not None:
+            if existing == scope:
+                raise ValueError(f"Identical scope already exists: {scope}")
+            else:
+                raise ValueError(f"Matching scope already exists: {scope}. {existing.argument=}, {scope.argument=}")
+        else:
+            self._scopes[scope.key] = scope
+            self._latest_key = scope.key
+
+    def remove(self, scope: ScopeInfo):
+        if scope in self:
+            del self._scopes[scope.key]
+        else:
+            raise ValueError(f"Scope {scope} was not found and could not be removed")
+
+    def clear(self):
+        self._scopes.clear()

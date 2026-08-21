@@ -15,7 +15,6 @@ from openpectus.lang.exec.uod import UnitOperationDefinitionBase, UodBuilder, Uo
 from openpectus.lang.model.pprogramformatter import print_parsed_program as print_program
 import openpectus.lang.model.ast as p
 from openpectus.lang.model.parser import PcodeParser
-from openpectus.protocol.models import Method
 from openpectus.test.engine.utility_methods import (
     EngineTestRunner, continue_engine, run_engine, build_program,
     configure_test_logger, set_engine_debug_logging, set_interpreter_debug_logging,
@@ -388,7 +387,6 @@ Mark: b3
         run_engine(engine, program, 30)
 
         self.assertEqual(["a", "b", "a1", "b1", "a2", "b2", "a3", "b3"], engine.interpreter.get_marks())
-        #self.assertEqual(['a', 'a1', 'a2', 'b', 'a3', 'b1', 'b2', 'b3'], engine.interpreter.get_marks())
 
     @unittest.skip("Block in Watch not supported")
     def test_watch_block_long_running_block_time(self):
@@ -813,10 +811,10 @@ Wait: 0.5 s
 """
         runner = EngineTestRunner(create_test_uod, program)
         with runner.run() as instance:
-            instance.start()            
-            
+            instance.start()
+
             instance.run_until_instruction("Block", arguments="B2", state="started")
-            self.assertEqual(instance.scope_node, "02")
+            self.assertEqual(instance.scope_node_id, "02")
             self.assertEqual(instance.scope_node_history, ["root", "01", "02"])
 
             instance.run_until_event("method_end")

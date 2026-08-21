@@ -850,7 +850,7 @@ Mark: b
         danger_tag = e.uod.tags["Danger"]
         self.assertTrue(danger_tag.get_value())
 
-        e._apply_safe_state()
+        e.apply_safe_state()
 
         self.assertFalse(danger_tag.get_value())
 

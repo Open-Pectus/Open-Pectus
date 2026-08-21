@@ -566,8 +566,8 @@ Stop
             self.assertEqual(danger.get_value(), False)
 
     def test_alarm_ends_scope(self):
-            logging.getLogger("openpectus.engine.engine").setLevel(logging.WARNING)
-            code = """\
+        logging.getLogger("openpectus.engine.engine").setLevel(logging.WARNING)
+        code = """\
 Alarm: Block Time > 1 s
     End block
 
@@ -582,12 +582,11 @@ Block: C
 
 Stop
 """
-            runner = EngineTestRunner(create_test_uod, code)
-            with runner.run() as instance:
-                e = instance.engine
-                instance.start_run()
+        runner = EngineTestRunner(create_test_uod, code)
+        with runner.run() as instance:
+            instance.start_run()
 
-                instance.run_until_instruction("Stop", max_ticks=60)
+            instance.run_until_instruction("Stop", max_ticks=60)
 
 class TestAccumulation(unittest.TestCase):
 
@@ -608,35 +607,6 @@ class TestAccumulation(unittest.TestCase):
 
     # --- Totalizers ---
 
-    # TODO remove - is unused
-    def create_totalizer_uod(self) -> UnitOperationDefinitionBase:
-        builder = (
-            UodBuilder()
-            .with_instrument("TestUod")
-            .with_author("Test Author", "test@openpectus.org")
-            .with_filename(__file__)
-            .with_hardware(TestHW())
-            .with_location("Test location")
-            .with_hardware_register("FT01", RegisterDirection.Both, path="Objects;2:System;2:FT01")
-            .with_hardware_register(
-                "Reset",
-                RegisterDirection.Both,
-                path="Objects;2:System;2:RESET",
-                from_tag=lambda x: 1 if x == "Reset" else 0,
-                to_tag=lambda x: "Reset" if x == 1 else "N/A",
-            )
-            .with_hardware_register(
-                "Danger",
-                RegisterDirection.Write,
-                path="Objects;2:System;2:Danger",
-                safe_value=False,
-            )
-            # Readings
-            .with_tag(ReadingTag("FT01", "L/h"))
-            .with_tag(SelectTag("Reset", value="N/A", unit=None, choices=["Reset", "N/A"]))
-            .with_tag(Tag("Danger", value=True, unit=None, direction=TagDirection.Output))
-        )
-        return builder.build()
 
     def test_totalizer_base_units_no_accumulator_allows_time_unit(self):
         runner = EngineTestRunner(self.create_test_uod, "Base: s\n0.1 Mark: A")
@@ -909,6 +879,7 @@ Base: CV
 
 
     def test_accumulated_column_block_volume(self):
+        delta = 0.1
         uod = (UodBuilder()
                .with_instrument("TestUod")
                .with_author("Test Author", "test@openpectus.org")
@@ -945,26 +916,26 @@ Mark: B
             t1 = instance.run_until_instruction("Base")
             t1_value = t1/10/2
             self.assertEqual(block.get_value(), None)
-            self.assertAlmostEqual(acc_cv.as_float(), t1_value, delta=0.1)
-            self.assertAlmostEqual(block_cv.as_float(), t1_value, delta=0.1)
+            self.assertAlmostEqual(acc_cv.as_float(), t1_value, delta=delta)
+            self.assertAlmostEqual(block_cv.as_float(), t1_value, delta=delta)
 
             t2 = instance.run_until_instruction("Block", state="started")
             t2_value = t2/10/2
             self.assertEqual(block.get_value(), "A")
-            self.assertAlmostEqual(acc_cv.as_float(), t1_value + t2_value, delta=0.1)
-            self.assertAlmostEqual(block_cv.as_float(), t2_value, delta=0.1)
+            self.assertAlmostEqual(acc_cv.as_float(), t1_value + t2_value, delta=delta)
+            self.assertAlmostEqual(block_cv.as_float(), t2_value, delta=delta)
 
             t3 = instance.run_until_instruction("Mark", state="started", arguments="A")
             t3_value = t3/10/2
             self.assertEqual(block.get_value(), "A")
-            self.assertAlmostEqual(acc_cv.as_float(), t1_value + t2_value + t3_value, delta=0.1)
-            self.assertAlmostEqual(block_cv.as_float(), t2_value + t3_value, delta=0.1)
+            self.assertAlmostEqual(acc_cv.as_float(), t1_value + t2_value + t3_value, delta=delta)
+            self.assertAlmostEqual(block_cv.as_float(), t2_value + t3_value, delta=delta)
 
             t4 = instance.run_until_instruction("Mark", arguments="B")
             t4_value = t4/10/2
             self.assertEqual(block.get_value(), None)
-            self.assertAlmostEqual(acc_cv.as_float(), t1_value + t2_value + t3_value + t4_value, delta=0.1)
-            self.assertAlmostEqual(block_cv.as_float(), t1_value + t2_value + t3_value + t4_value, delta=0.1)
+            self.assertAlmostEqual(acc_cv.as_float(), t1_value + t2_value + t3_value + t4_value, delta=delta)
+            self.assertAlmostEqual(block_cv.as_float(), t1_value + t2_value + t3_value + t4_value, delta=delta)
 
 
     def test_accumulated_column_volume_watch(self):
@@ -1027,6 +998,7 @@ class TestDerivedTag(unittest.TestCase):
 
     def test_no_tags_developing_value(self):
         x = 0
+
         def fn():
             nonlocal x
             x += 1
