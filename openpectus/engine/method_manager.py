@@ -393,11 +393,11 @@ class MethodManager:
 
         def add_locking(node: p.Node):
             if node is all_nodes[-1]:
-                method_state.semi_locked_line_ids.append(node.id)
+                method_state.content_locked_line_ids.append(node.id)
             elif macro_or_alarm_is_blocking(node):
                 method_state.locked_line_ids.append(node.id)
             elif node.parent and isinstance(node.parent, p.BlockNode) and not node.parent.completed and node.parent.children[-1] is node:
-                method_state.semi_locked_line_ids.append(node.id)
+                method_state.content_locked_line_ids.append(node.id)
             else:
                 method_state.locked_line_ids.append(node.id)
 

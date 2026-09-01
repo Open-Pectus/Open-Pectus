@@ -13,6 +13,6 @@ export class MethodEditorSelectors {
   static executedLineIds = createSelector(this.methodState, methodState => methodState.executed_line_ids);
   static startedLineIds = createSelector(this.methodState, methodState => methodState.started_line_ids);
   static lockedLineIds = createSelector(this.methodState, methodState => methodState.locked_line_ids);
-  static semiLockedLineIds = createSelector(this.methodState, methodState => methodState.semi_locked_line_ids);
+  static contentLockedLineIds = createSelector(this.methodState, methodState => methodState.content_locked_line_ids);
   static versionMismatch = createSelector(this.selectFeature, state => state.versionMismatch);
 }

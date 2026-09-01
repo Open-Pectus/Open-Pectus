@@ -24,7 +24,7 @@ import {
 
 const startedLines = [2];
 const executedLines = [1, 4];
-const semiLockedLines = [4];
+const contentLockedLines = [4];
 const lockedLines = [1,2];
 const controlState: ControlState = {
   is_running: false,
@@ -608,7 +608,7 @@ export const handlers = [
         started_line_ids: startedLines.map(no => (no + 9).toString(36)),
         executed_line_ids: executedLines.map(no => (no + 9).toString(36)),
         injected_line_ids: ['d'],
-        semi_locked_line_ids: semiLockedLines.map(no => (no + 9).toString(36)),
+        content_locked_line_ids: contentLockedLines.map(no => (no + 9).toString(36)),
         locked_line_ids: lockedLines.map(no => (no + 9).toString(36)),
       },
     });
@@ -829,7 +829,7 @@ export const handlers = [
         started_line_ids: ['d'],
         executed_line_ids: ['a', 'b', 'c', 'g'],
         injected_line_ids: ['c'],
-        semi_locked_line_ids: ['d'],
+        content_locked_line_ids: ['d'],
         locked_line_ids: ['a', 'b', 'c', 'g']
       },
     });

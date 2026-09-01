@@ -19,7 +19,7 @@ const initialState: MethodEditorState = {
     started_line_ids: [],
     executed_line_ids: [],
     injected_line_ids: [],
-    semi_locked_line_ids: [],
+    content_locked_line_ids: [],
     locked_line_ids: [],
   },
 };
@@ -53,15 +53,15 @@ const reducer = createReducer(initialState,
     if (!UtilMethods.arrayEquals(draft.methodState.locked_line_ids, methodAndState.state.locked_line_ids,)) {
           draft.methodState.locked_line_ids = methodAndState.state.locked_line_ids;
     }
-    if (!UtilMethods.arrayEquals(draft.methodState.semi_locked_line_ids, methodAndState.state.semi_locked_line_ids,)) {
-      draft.methodState.semi_locked_line_ids =methodAndState.state.semi_locked_line_ids;
+    if (!UtilMethods.arrayEquals(draft.methodState.content_locked_line_ids, methodAndState.state.content_locked_line_ids,)) {
+      draft.methodState.content_locked_line_ids =methodAndState.state.content_locked_line_ids;
     }
 
     const idsToSync = [
       ...methodAndState.state.executed_line_ids,
       ...methodAndState.state.started_line_ids,
       ...methodAndState.state.locked_line_ids,
-      ...methodAndState.state.semi_locked_line_ids,
+      ...methodAndState.state.content_locked_line_ids,
     ];
     idsToSync.forEach((lockedLineId) => {
       const oldLine = draft.method.lines.find(line => line.id === lockedLineId);

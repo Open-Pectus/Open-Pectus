@@ -363,24 +363,24 @@ class MethodState(Dto):
     started_line_ids: list[str]
     executed_line_ids: list[str]
     locked_line_ids: list[str]
-    semi_locked_line_ids: list[str]
+    content_locked_line_ids: list[str]
     injected_line_ids: list[str]
 
     def __str__(self) -> str:
         return (f'{self.__class__.__name__}(started_line_ids={self.started_line_ids}, ' +
                 f'executed_line_ids={self.executed_line_ids}, locked_line_ids={self.locked_line_ids}, ' +
-                f'semi_locked_line_ids={self.semi_locked_line_ids}, injected_line_ids={self.injected_line_ids})')
+                f'content_locked_line_ids={self.content_locked_line_ids}, injected_line_ids={self.injected_line_ids})')
 
     @staticmethod
     def empty() -> MethodState:
-        return MethodState(started_line_ids=[], executed_line_ids=[], locked_line_ids=[], semi_locked_line_ids=[], injected_line_ids=[])
+        return MethodState(started_line_ids=[], executed_line_ids=[], locked_line_ids=[], content_locked_line_ids=[], injected_line_ids=[])
 
     @staticmethod
     def from_model(method_state: Mdl.MethodState) -> MethodState:
         return MethodState(started_line_ids=[_id for _id in method_state.started_line_ids],
                            executed_line_ids=[_id for _id in method_state.executed_line_ids],
                            locked_line_ids=[_id for _id in method_state.locked_line_ids],
-                           semi_locked_line_ids=[_id for _id in method_state.semi_locked_line_ids],
+                           content_locked_line_ids=[_id for _id in method_state.content_locked_line_ids],
                            injected_line_ids=[_id for _id in method_state.injected_line_ids])
 
 
