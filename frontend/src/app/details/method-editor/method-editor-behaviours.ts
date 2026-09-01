@@ -10,6 +10,8 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
 const startedLineClassName = 'started-line';
 const executedLineClassName = 'executed-line';
 const injectedLineClassName = 'injected-line';
+const lockedLineClassName = 'locked-line';
+const semiLockedLineClassName = 'semi-locked-line';
 const lineIdClassNamePrefix = 'line-id-';
 
 // Behaviours only for the method editor
@@ -17,6 +19,9 @@ export class MethodEditorBehaviours {
   private executedLineIds = this.store.select(MethodEditorSelectors.executedLineIds);
   private injectedLineIds = this.store.select(MethodEditorSelectors.injectedLineIds);
   private startedLineIds = this.store.select(MethodEditorSelectors.startedLineIds);
+  // TODO look into better naming of these variables. 
+  private lockedLineIds = this.store.select(MethodEditorSelectors.lockedLineIds);
+  private semiLockedLineIds = this.store.select(MethodEditorSelectors.semiLockedLineIds);
   private lineIds = this.store.select(MethodEditorSelectors.lineIds);
   private methodLines = this.store.select(MethodEditorSelectors.methodLines);
   private isDirty = this.store.select(MethodEditorSelectors.isDirty);
@@ -29,7 +34,8 @@ export class MethodEditorBehaviours {
     this.setupOnEditorChanged();
     this.setupOnStoreModelChanged();
     this.setupInjectedLines();
-    this.setupStartedAndExecutedLines();
+    this.setupLockedAndSemiLockedLines();
+    this.setupDecoratingStartedAndExecutedLines();
     this.setupCtrlSAction();
     this.setupDialogOnLeaveWithUnsavedChanges();
   }
@@ -101,26 +107,40 @@ export class MethodEditorBehaviours {
     };
   }
 
-  private setupStartedAndExecutedLines() {
-    const startedAndExecutedLinesDecorationCollection = this.setupDecoratingStartedAndExecutedLines();
+  private setupLockedAndSemiLockedLines() {
+    const collections = this.setupDecoratingLockedAndSemiLockedLines();
     if(!this.editor.getOption(MonacoEditor.EditorOption.readOnly)) {
-      this.setupLockingStartedAndExecutedLines(startedAndExecutedLinesDecorationCollection);
+      this.setupLockingLockedAndSemiLockedLines(collections.locked, collections.semiLocked);
     }
   }
 
-  private setupLockingStartedAndExecutedLines(startedAndExecutedLineDecorations: MonacoEditor.IEditorDecorationsCollection) {
-    const lockEditorIfSelectionIntersectsExecutedLines = () => {
-      const selectionInLockedRange = this.editor.getSelections()?.some(selection => {
-        return startedAndExecutedLineDecorations.getRanges()
-          .flatMap(range => UtilMethods.getNumberRange(range.startLineNumber, range.endLineNumber))
-          .some(lockedLineNumber => {
-            return selection.intersectRanges(new Range(lockedLineNumber, 0, lockedLineNumber + 1, 0));
-          });
-      });
-      this.editor.updateOptions({readOnly: selectionInLockedRange, readOnlyMessage: {value: 'Cannot edit lines already started or executed'}});
+  private setupLockingLockedAndSemiLockedLines(lockedCollection: MonacoEditor.IEditorDecorationsCollection, semiLockedCollection: MonacoEditor.IEditorDecorationsCollection) {
+    
+    const linesFrom = (c: MonacoEditor.IEditorDecorationsCollection) =>
+      c.getRanges().flatMap(r => UtilMethods.getNumberRange(r.startLineNumber, r.endLineNumber));
+
+    const selectionIntersectsLines = (lineNumbers: number[]) =>
+      this.editor.getSelections()?.some(selection =>
+        lineNumbers.some(ln => selection.intersectRanges(new Range(ln, 0, ln + 1, 0))),
+      ) ?? false;
+    
+    const lockEditorIfSelectionIntersectsLockedLines = () => {
+      const inLocked = selectionIntersectsLines(linesFrom(lockedCollection));
+      console.log("inLocked: " + inLocked);
+      const inSemiLocked = selectionIntersectsLines(linesFrom(semiLockedCollection));
+      console.log("inSemiLocked: " + inSemiLocked);
+
+      //TODO, what is the actual meassage here? 
+      const locking = inLocked
+        ? {readOnly: true, readOnlyMessage: {value: 'This line is locked.'}}
+        : inSemiLocked
+          ? {readOnly: true, readOnlyMessage: {value: 'This line is semi-locked. Press Enter to add a new line below.'}}
+          : {readOnly: false, readOnlyMessage: {value: ''}};
+      this.editor.updateOptions(locking);
+
     };
-    this.editor.onDidChangeCursorSelection(lockEditorIfSelectionIntersectsExecutedLines);
-    this.executedLineIds.pipe(takeUntil(this.componentDestroyed)).subscribe(lockEditorIfSelectionIntersectsExecutedLines);
+    this.editor.onDidChangeCursorSelection(lockEditorIfSelectionIntersectsLockedLines);
+    this.lockedLineIds.pipe(takeUntil(this.componentDestroyed)).subscribe(lockEditorIfSelectionIntersectsLockedLines);
 
     // Block specifically delete/backspace when at the ending/starting edge of the line before/after the locked line.
     this.editor.onKeyDown(event => {
@@ -128,7 +148,7 @@ export class MethodEditorBehaviours {
       const isDelete = event.keyCode === KeyCode.Delete;
       if(!isBackspace && !isDelete) return;
       const selectionInLockedRange = this.editor.getSelections()?.some(selection => {
-        return startedAndExecutedLineDecorations.getRanges()
+        return lockedCollection.getRanges()
           .flatMap(range => UtilMethods.getNumberRange(range.startLineNumber, range.endLineNumber))
           .some(lockedLineNumber => {
             const previousLineLength = this.editor?.getModel()?.getLineLength(Math.max(1, lockedLineNumber - 1)) ?? 0;
@@ -141,6 +161,30 @@ export class MethodEditorBehaviours {
       if(selectionInLockedRange) {
         event.stopPropagation();
         event.preventDefault();
+      }
+    });
+
+    this.editor.onKeyDown(event => {
+      const lockedLines = linesFrom(lockedCollection);
+      const semiLockedLines = linesFrom(semiLockedCollection);
+
+      const onLocked = selectionIntersectsLines(lockedLines);
+      const onSemiLocked = selectionIntersectsLines(semiLockedLines);
+
+      if (onSemiLocked && !onLocked && event.keyCode === KeyCode.Enter) {
+        console.log("Is semi locked");
+        event.preventDefault();
+        event.stopPropagation();
+        const sel = this.editor.getSelection();
+        if (!sel) return;
+        const eol = this.editor.getModel()?.getLineMaxColumn(sel.startLineNumber) ?? 1;
+        this.editor.updateOptions({ readOnly: false });
+        this.editor.executeEdits('semi-locked-enter', [{
+          range: new Range(sel.startLineNumber, eol, sel.startLineNumber, eol),
+          text: '\n',
+          forceMoveMarkers: true,
+        }]);
+        this.editor.setPosition({lineNumber: sel.startLineNumber + 1, column: 1});
       }
     });
   }
@@ -167,14 +211,48 @@ export class MethodEditorBehaviours {
       takeUntil(this.componentDestroyed),
     ).subscribe(([[startedLineIds, executedLineIds], lineIds]) => {
       const executedLinesDecorations = executedLineIds.map<MonacoEditor.IModelDeltaDecoration>(
-        createDecoration(lineIds, executedLineClassName, 'This line has been executed and is no longer editable.'),
+        createDecoration(lineIds, executedLineClassName, 'This line has been executed.'),
       );
       const startedLinesDecorations = startedLineIds.map<MonacoEditor.IModelDeltaDecoration>(
-        createDecoration(lineIds, startedLineClassName, 'This line has been started and is no longer editable.'),
+        createDecoration(lineIds, startedLineClassName, 'This line has been started.'),
       );
       startedAndExecutedLinesDecorationsCollection.set([...executedLinesDecorations, ...startedLinesDecorations]);
     });
     return startedAndExecutedLinesDecorationsCollection;
+  }
+
+  private setupDecoratingLockedAndSemiLockedLines() {
+    const lockedCollection = this.editor.createDecorationsCollection();
+    const semiLockedCollection = this.editor.createDecorationsCollection();
+    const createDecoration = (lineIds: string[], lineClassName: string, hoverMessage: string) => (lockedLineId: string) => {
+      const lineNumber = lineIds.findIndex(lineId => lineId === lockedLineId) + 1;
+      if(lineNumber === undefined) throw Error(`could not find line id decoration with id ${lockedLineId}`);
+      return {
+        range: new Range(lineNumber, 0, lineNumber, 0),
+        options: {
+          isWholeLine: true,
+          className: lineClassName,
+          hoverMessage: {value: hoverMessage},
+          shouldFillLineOnLineBreak: false,
+          stickiness: MonacoEditor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+        },
+      };
+    };
+
+    combineLatest([this.semiLockedLineIds, this.lockedLineIds]).pipe(
+      concatLatestFrom(() => this.lineIds),
+      takeUntil(this.componentDestroyed),
+    ).subscribe(([[semiLockedLineIds, lockedLineIds], lineIds]) => {
+      const lockedLinesDecorations = lockedLineIds.map<MonacoEditor.IModelDeltaDecoration>(
+        createDecoration(lineIds, lockedLineClassName, 'This line has been locked and is no longer editable.'),
+      );
+      const semiLockedLinesDecorations = semiLockedLineIds.map<MonacoEditor.IModelDeltaDecoration>(
+        createDecoration(lineIds, semiLockedLineClassName, 'This line is semi locked, only newline is allowed.'),
+      );
+      lockedCollection.set(lockedLinesDecorations);
+      semiLockedCollection.set(semiLockedLinesDecorations);
+    });
+    return {locked: lockedCollection, semiLocked: semiLockedCollection};
   }
 
   private decorateInjectedLines() {

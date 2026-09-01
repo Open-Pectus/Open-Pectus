@@ -19,6 +19,8 @@ const initialState: MethodEditorState = {
     started_line_ids: [],
     executed_line_ids: [],
     injected_line_ids: [],
+    semi_locked_line_ids: [],
+    locked_line_ids: [],
   },
 };
 
@@ -48,9 +50,20 @@ const reducer = createReducer(initialState,
     if(!UtilMethods.arrayEquals(draft.methodState.started_line_ids, methodAndState.state.started_line_ids)) {
       draft.methodState.started_line_ids = methodAndState.state.started_line_ids;
     }
+    if (!UtilMethods.arrayEquals(draft.methodState.locked_line_ids, methodAndState.state.locked_line_ids,)) {
+          draft.methodState.locked_line_ids = methodAndState.state.locked_line_ids;
+    }
+    if (!UtilMethods.arrayEquals(draft.methodState.semi_locked_line_ids, methodAndState.state.semi_locked_line_ids,)) {
+      draft.methodState.semi_locked_line_ids =methodAndState.state.semi_locked_line_ids;
+    }
 
-    const lockedLineIds = methodAndState.state.executed_line_ids.concat(methodAndState.state.started_line_ids);
-    lockedLineIds.forEach((lockedLineId) => {
+    const idsToSync = [
+      ...methodAndState.state.executed_line_ids,
+      ...methodAndState.state.started_line_ids,
+      ...methodAndState.state.locked_line_ids,
+      ...methodAndState.state.semi_locked_line_ids,
+    ];
+    idsToSync.forEach((lockedLineId) => {
       const oldLine = draft.method.lines.find(line => line.id === lockedLineId);
       const newLineIndex = methodAndState.method.lines.findIndex(line => line.id === lockedLineId);
       const newLine = methodAndState.method.lines[newLineIndex];
@@ -64,29 +77,20 @@ const reducer = createReducer(initialState,
         oldLine.content = newLine.content;
       }
     });
-  })),
-  on(MethodEditorActions.modelSaved, (state, {newVersion}) => produce(state, draft => {
-    draft.isDirty = false;
-    draft.method.version = newVersion;
-  })),
-  on(MethodEditorActions.linesChanged, (state, {lines}) => produce(state, draft => {
-    draft.isDirty = true;
-    draft.method.lines = lines;
-  })),
-  on(MethodEditorActions.saveButtonClicked, (state) => produce(state, draft => {
-    const lastLine = state.method.lines.at(-1);
-    if(lastLine?.content.trim() !== '') {
-      draft.method.lines.push({
-        id: crypto.randomUUID(),
-        content: '',
-      });
-    }
-  })),
-  on(MethodEditorActions.methodRefreshRequested, state => produce(state, draft => {
-    draft.method = initialState.method;
-    draft.isDirty = false;
-    draft.versionMismatch = false;
-  })),
+    })),
+    on(MethodEditorActions.modelSaved, (state, {newVersion}) => produce(state, draft => {
+      draft.isDirty = false;
+      draft.method.version = newVersion;
+    })),
+    on(MethodEditorActions.linesChanged, (state, {lines}) => produce(state, draft => {
+      draft.isDirty = true;
+      draft.method.lines = lines;
+    })),
+    on(MethodEditorActions.methodRefreshRequested, state => produce(state, draft => {
+      draft.method = initialState.method;
+      draft.isDirty = false;
+      draft.versionMismatch = false;
+    })),
 );
 
 export const methodEditorSlice = {name: 'methodEditor', reducer};

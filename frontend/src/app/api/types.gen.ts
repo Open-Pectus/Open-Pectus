@@ -89,6 +89,8 @@ export type MethodState = {
     started_line_ids: Array<string>;
     executed_line_ids: Array<string>;
     injected_line_ids: Array<string>;
+    locked_line_ids: Array<string>;
+    semi_locked_line_ids: Array<string>;
 };
 
 export type MethodVersion = {
