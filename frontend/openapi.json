@@ -2506,6 +2506,20 @@
             "type": "array",
             "title": "Executed Line Ids"
           },
+          "locked_line_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Locked Line Ids"
+          },
+          "content_locked_line_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Content Locked Line Ids"
+          },
           "injected_line_ids": {
             "items": {
               "type": "string"
@@ -2518,6 +2532,8 @@
         "required": [
           "started_line_ids",
           "executed_line_ids",
+          "locked_line_ids",
+          "content_locked_line_ids",
           "injected_line_ids"
         ],
         "title": "MethodState"
