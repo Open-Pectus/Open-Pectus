@@ -499,6 +499,17 @@ class NodeWithChildren(Node):
             for child in self.children:
                 child.reset_runtime_state(recursive)
 
+    def get_all_nodes(self) -> list[Node]:
+            """ Return all nodes, depth first, as a flat list"""
+            def add_child_nodes(node, nodes: list[Node]):
+                nodes.append(node)
+                if isinstance(node, NodeWithChildren):
+                    for child in node.children:
+                        add_child_nodes(child, nodes)
+            nodes = []
+            add_child_nodes(self, nodes)
+            return nodes
+
 class ProgramNode(NodeWithChildren):
     def __init__(self, position=Position.empty(), id=""):
         super().__init__(position, id)
@@ -522,17 +533,6 @@ class ProgramNode(NodeWithChildren):
         if not include_blanks:
             return [n for n in children if not isinstance(n, BlankNode)]
         return children
-
-    def get_all_nodes(self) -> list[Node]:
-        """ Return all nodes, depth first, as a flat list"""
-        def add_child_nodes(node, nodes: list[Node]):
-            nodes.append(node)
-            if isinstance(node, NodeWithChildren):
-                for child in node.children:
-                    add_child_nodes(child, nodes)
-        nodes = []
-        add_child_nodes(self, nodes)
-        return nodes
 
     def get_locked_blocks(self) -> list[BlockNode]:
         """ Return the locked blocks, ordered from inner to outer so the first block is currently active. """

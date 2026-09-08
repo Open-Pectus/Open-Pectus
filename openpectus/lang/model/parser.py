@@ -188,6 +188,28 @@ def lsp_parse_line(pcode_query: str) -> LspParseResult | None:
         return LspParseResult(indent or "", threshold or "", instruction_name, argument or "")
 
 
+def _reparent_trailing_blanks_to_program(program: p.ProgramNode) -> None:
+    """ Detach BlankNodes that trail some container and reparent them to the program node"""
+    moved: list[p.BlankNode] = []
+
+    def visit(container: p.NodeWithChildren):
+        for child in list(container.children):
+            if isinstance(child, p.NodeWithChildren):
+                visit(child)
+        if container is program:
+            return
+        while container._children and isinstance(container._children[-1], p.BlankNode):
+            blank = container._children.pop()
+            blank.parent = program
+            moved.append(blank) # type: ignore
+
+    visit(program)
+    if not moved:
+        return
+    for blank in moved:
+        program._children.append(blank)
+    program._children.sort(key=lambda c: c.position.line)
+
 class PcodeParser:
     def __init__(self, id_generator: NodeIdGenerator = IncrementalIdGenerator(), uod_command_names: list[str] = []):
         self.id_generator: NodeIdGenerator = id_generator
@@ -296,6 +318,8 @@ class PcodeParser:
                 prev_node = node
                 if not is_whitespace_node:
                     prev_indent = prev_node.position.character
+
+        _reparent_trailing_blanks_to_program(program)
 
         return program
 
