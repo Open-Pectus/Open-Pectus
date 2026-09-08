@@ -450,7 +450,7 @@ class PInterpreter(NodeVisitor):
             # We can take the lock iff
             # 1) There are no locked blocks or 2) all locked blocks are ancestors of node
             ancestors = node.parents
-            for block in self._program.get_locked_blocks():
+            for block in self._get_locked_blocks():
                 if block not in ancestors:
                     logger.debug(f"Block {node.key} could not acquire lock, {block.key} holds it")
                     return
@@ -511,7 +511,8 @@ class PInterpreter(NodeVisitor):
         old_block: p.BlockNode | None = None
         new_block: p.BlockNode | None = None
 
-        locked_blocks = self._program.get_locked_blocks()
+        locked_blocks = self._get_locked_blocks()
+
         locked_block_keys = [b.key for b in locked_blocks]
         logger.debug("Locked blocks: " + '\n'.join(locked_block_keys))
         if len(locked_blocks) == 0:
@@ -547,7 +548,7 @@ class PInterpreter(NodeVisitor):
 
 
     def visit_EndBlocksNode(self, node: p.EndBlocksNode) -> NodeGenerator:
-        locked_blocks = self._program.get_locked_blocks()
+        locked_blocks = self._get_locked_blocks()
         locked_block_keys = [b.key for b in locked_blocks]
         self.tracking.mark_started(node)
         logger.debug("Locked blocks: " + ', '.join(locked_block_keys))
@@ -988,14 +989,25 @@ class PInterpreter(NodeVisitor):
         """
         if any(isinstance(parent, p.BlockNode) and parent.block_ended for parent in node.parents):
             return True
-        for node_id in self.sep.node_ids():   
-            n = self.get_node_by_id(node_id)
+        for node_id in self.sep.node_ids(): 
+            n = self.tracking.get_known_node_by_id(node_id)
             if isinstance(n, p.BlockNode) and n.block_ended:
                 return True
             if n is not None and any(isinstance(parent, p.BlockNode) and parent.block_ended for parent in n.parents):
                 return True
         return False
 
+    def _get_locked_blocks(self) -> list[p.BlockNode]:
+        locked_blocks_from_main = self._program.get_locked_blocks()
+
+        locked_blocks_from_injection = [
+            block
+            for it in self._interrupts_map.values()
+            if isinstance(it.node, p.InjectedNode)
+            for block in it.node.get_locked_blocks()
+        ]
+        return locked_blocks_from_main + locked_blocks_from_injection
+    
     def _is_awaiting_threshold(self, node: p.Node):
         if node.completed:
             return False

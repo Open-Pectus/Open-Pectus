@@ -44,6 +44,9 @@ class Tracking():
 
     def get_runlog(self) -> RunLog:
         return self.runtimeinfo.get_runlog()
+    
+    def get_queued_runlog(self) -> RunLog:
+        return self.runtimeinfo.get_queued_runlog()
 
     def has_instance_id(self, instance_id: str) -> bool:
         return instance_id in self.runtimeinfo._instance_record_map.keys()

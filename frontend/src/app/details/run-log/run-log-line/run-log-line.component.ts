@@ -37,13 +37,18 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
          class="border-b-2 border-white cursor-pointer"
          (click)="toggleCollapse(expanded())">
       <div class="grid gap-2 px-3 py-2" [style.grid]="gridFormat()">
-        <p>{{ runLogLine()?.start ?? '' | date }}</p>
+        <p>{{ isQueued() ? "Queued" : (runLogLine()?.start ?? "" | date) }}</p>
         @if (runLogLine()?.end !== undefined) {
           <p>{{ runLogLine()?.end ?? '' | date }}</p>
         }
-        @if (runLogLine()?.end === undefined) {
-          <app-run-log-line-progress [value]="runLogLine()?.progress" class="py-0.5"
-           />
+          @if (runLogLine()?.end === undefined && !isQueued()) {
+          <app-run-log-line-progress
+            [value]="runLogLine()?.progress"
+            class="py-0.5"
+          />
+        }
+        @if (isQueued()) {
+          <p></p>
         }
         <p>{{ runLogLine()?.command?.command }}</p>
         <div class="col-end-6 flex gap-2">
@@ -113,4 +118,8 @@ export class RunLogLineComponent implements AfterViewInit {
                         ? RunLogActions.collapseLine({id: runLogLine.id})
                         : RunLogActions.expandLine({id: runLogLine.id}));
   }
+  
+  protected isQueued = computed(() => {
+    return this.runLogLine()?.id === "QueuedCommand";
+  });
 }

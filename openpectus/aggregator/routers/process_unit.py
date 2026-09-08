@@ -256,7 +256,9 @@ def get_run_log(
         agg: Aggregator = Depends(agg_deps.get_aggregator)) -> Dto.RunLog:
     engine_data = get_registered_engine_data_or_fail(unit_id, user_roles, agg)
     if not engine_data.has_run():
-        return Dto.RunLog.empty()
+        return Dto.RunLog(
+            lines=list(map(Dto.RunLogLine.from_model, engine_data.queued_runlog.lines))
+            )
     else:
         return Dto.RunLog(
             lines=list(map(Dto.RunLogLine.from_model, engine_data.run_data.runlog.lines))
