@@ -19,7 +19,6 @@ export class MethodEditorBehaviours {
   private executedLineIds = this.store.select(MethodEditorSelectors.executedLineIds);
   private injectedLineIds = this.store.select(MethodEditorSelectors.injectedLineIds);
   private startedLineIds = this.store.select(MethodEditorSelectors.startedLineIds);
-  // TODO look into better naming of these variables. 
   private lockedLineIds = this.store.select(MethodEditorSelectors.lockedLineIds);
   private contentLockedLineIds = this.store.select(MethodEditorSelectors.contentLockedLineIds);
   private lineIds = this.store.select(MethodEditorSelectors.lineIds);
@@ -126,11 +125,8 @@ export class MethodEditorBehaviours {
     
     const lockEditorIfSelectionIntersectsLockedLines = () => {
       const inLocked = selectionIntersectsLines(linesFrom(lockedCollection));
-      console.log("inLocked: " + inLocked);
       const inContentLocked = selectionIntersectsLines(linesFrom(contentLockedCollection));
-      console.log("inContentLocked: " + inContentLocked);
 
-      //TODO, what is the actual meassage here? 
       const locking = inLocked
         ? {readOnly: true, readOnlyMessage: {value: 'This line is locked.'}}
         : inContentLocked
@@ -147,6 +143,7 @@ export class MethodEditorBehaviours {
       const isBackspace = event.keyCode === KeyCode.Backspace;
       const isDelete = event.keyCode === KeyCode.Delete;
       if(!isBackspace && !isDelete) return;
+      if(selectionIntersectsLines(linesFrom(lockedCollection))) return;
       const selectionInLockedRange = this.editor.getSelections()?.some(selection => {
         return lockedCollection.getRanges()
           .flatMap(range => UtilMethods.getNumberRange(range.startLineNumber, range.endLineNumber))
@@ -172,7 +169,6 @@ export class MethodEditorBehaviours {
       const onContentLocked = selectionIntersectsLines(contentLockedLines);
 
       if (onContentLocked && !onLocked && event.keyCode === KeyCode.Enter) {
-        console.log("Is content-locked");
         event.preventDefault();
         event.stopPropagation();
         const sel = this.editor.getSelection();
