@@ -89,7 +89,7 @@ export class MethodEditorBehaviours {
           options: {
             className: lineIdClassNamePrefix + lineId,
             shouldFillLineOnLineBreak: false,
-            stickiness: MonacoEditor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+            stickiness: MonacoEditor.TrackedRangeStickiness.GrowsOnlyWhenTypingBefore,
           },
         };
       });
@@ -178,7 +178,6 @@ export class MethodEditorBehaviours {
         this.editor.executeEdits('content-locked-enter', [{
           range: new Range(sel.startLineNumber, eol, sel.startLineNumber, eol),
           text: '\n',
-          forceMoveMarkers: true,
         }]);
         this.editor.setPosition({lineNumber: sel.startLineNumber + 1, column: 1});
       }
@@ -197,7 +196,7 @@ export class MethodEditorBehaviours {
           className: lineClassName,
           hoverMessage: {value: hoverMessage},
           shouldFillLineOnLineBreak: false,
-          stickiness: MonacoEditor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+          stickiness: MonacoEditor.TrackedRangeStickiness.GrowsOnlyWhenTypingBefore,
         },
       };
     };
@@ -230,7 +229,7 @@ export class MethodEditorBehaviours {
           className: lineClassName,
           hoverMessage: {value: hoverMessage},
           shouldFillLineOnLineBreak: false,
-          stickiness: MonacoEditor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+          stickiness: MonacoEditor.TrackedRangeStickiness.GrowsOnlyWhenTypingBefore,
         },
       };
     };
@@ -267,7 +266,7 @@ export class MethodEditorBehaviours {
             hoverMessage: {value: 'This line has been injected and is not part of the methodContent.'},
             linesDecorationsClassName: 'codicon-export codicon -ml-injected-line-icon',
             shouldFillLineOnLineBreak: false,
-            stickiness: MonacoEditor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+            stickiness: MonacoEditor.TrackedRangeStickiness.GrowsOnlyWhenTypingBefore,
           },
         };
       });
