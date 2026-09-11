@@ -382,13 +382,57 @@ class MethodManager:
     def _get_method_state(self, program: p.ProgramNode) -> Mdl.MethodState:
         all_nodes = program.get_all_nodes()
         method_state = Mdl.MethodState.empty()
+
+        def macro_or_alarm_is_blocking(node: p.Node) -> bool:
+            if node.parent and ((isinstance(node.parent, p.MacroNode) and node.parent.run_completed_count > 0) 
+                      or (isinstance(node.parent, p.AlarmNode) and node.parent.run_count > 0)):
+                return True
+            elif node.parent:
+                return macro_or_alarm_is_blocking(node.parent)
+            return False
+
+        def is_watch_child(node: p.Node) -> tuple[bool, p.WatchNode | None]:
+            if node.parent and isinstance(node.parent, p.WatchNode):
+                return True, node.parent
+            elif node.parent:
+                return is_watch_child(node.parent)
+            return False, None
+
+        def is_in_completed_block(node: p.Node) -> bool:
+            if node.parent and isinstance(node.parent, p.BlockNode) and node.parent.completed:
+                return True
+            elif node.parent:
+                return is_in_completed_block(node.parent)
+            return False
+
+        def add_locking(node: p.Node):
+            watch_child, watch_node = is_watch_child(node)
+            if node is all_nodes[-1]:
+                method_state.content_locked_line_ids.append(node.id)
+            elif macro_or_alarm_is_blocking(node):
+                method_state.locked_line_ids.append(node.id)
+            elif node.parent and isinstance(node.parent, p.BlockNode) and not node.parent.completed and node.parent.children[-1] is node:
+                method_state.content_locked_line_ids.append(node.id)
+            elif watch_child and watch_node is not None:
+                all_nodes_watch = watch_node.get_all_nodes()
+                if node is all_nodes_watch[-1] and not is_in_completed_block(node):
+                    method_state.content_locked_line_ids.append(node.id)
+                else:
+                    method_state.locked_line_ids.append(node.id)
+            else:
+                method_state.locked_line_ids.append(node.id)
+
         for node in all_nodes:
             if node.failed:
                 method_state.failed_line_ids.append(node.id)
             elif node.completed:
                 method_state.executed_line_ids.append(node.id)
+                add_locking(node)
             elif node.started:
                 method_state.started_line_ids.append(node.id)
+                add_locking(node)
+            elif macro_or_alarm_is_blocking(node):
+                method_state.locked_line_ids.append(node.id)
             # injected node ids are created as negative integers
             id_int = as_int(node.id)
             if id_int is not None and id_int < 0:

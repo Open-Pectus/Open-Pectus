@@ -187,7 +187,6 @@ def lsp_parse_line(pcode_query: str) -> LspParseResult | None:
         argument = match_groups.get("argument", "")
         return LspParseResult(indent or "", threshold or "", instruction_name, argument or "")
 
-
 class PcodeParser:
     def __init__(self, id_generator: NodeIdGenerator = IncrementalIdGenerator(), uod_command_names: list[str] = []):
         self.id_generator: NodeIdGenerator = id_generator
