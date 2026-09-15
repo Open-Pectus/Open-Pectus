@@ -1,4 +1,46 @@
 {
+  "editor.formatOnSave": false,
+  "editor.formatOnPaste": false,
+  "editor.formatOnType": false,
+  "editor.formatOnSaveMode": "file",
+  "editor.codeActionsOnSave": {},
+  "files.trimTrailingWhitespace": false,
+  "files.trimFinalNewlines": false,
+  "files.insertFinalNewline": false,
+
+  "[typescript]": {
+    "editor.formatOnSave": false,
+    "editor.formatOnPaste": false,
+    "editor.defaultFormatter": null,
+    "editor.codeActionsOnSave": {}
+  },
+  "[typescriptreact]": {
+    "editor.formatOnSave": false,
+    "editor.formatOnPaste": false,
+    "editor.defaultFormatter": null,
+    "editor.codeActionsOnSave": {}
+  },
+  "[python]": {
+    "editor.formatOnSave": false,
+    "editor.formatOnPaste": false,
+    "editor.defaultFormatter": null,
+    "editor.codeActionsOnSave": {}
+  },
+  "[json]": {
+    "editor.formatOnSave": false,
+    "editor.formatOnPaste": false
+  },
+
+  "typescript.format.enable": false,
+  "javascript.format.enable": false,
+
+  "python.analysis.autoFormatStrings": false,
+
+  "eslint.format.enable": false,
+  "eslint.codeActionsOnSave.rules": null,
+
+  "chat.editing.autoAcceptDelay": 0,
+
     "python.testing.unittestArgs": [
         "-v",
         "-s",
