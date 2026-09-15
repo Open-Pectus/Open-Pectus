@@ -423,6 +423,8 @@ class MethodManager:
                 method_state.locked_line_ids.append(node.id)
 
         for node in all_nodes:
+            if isinstance(node, p.ProgramNode):
+                continue
             if node.failed:
                 method_state.failed_line_ids.append(node.id)
             elif node.completed:
