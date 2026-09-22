@@ -1110,7 +1110,82 @@ Watch: Run counter > 0
             instance.run_until_instruction("Mark", state="completed", arguments="XX", max_ticks=50)
             self.assertEqual(["XX"], instance.marks_latest)
 
+    def test_edit_errorInstruction(self):
+        method1 = Method.from_numbered_pcode("""\
+01 
+02 Foo
+03 
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 
+02 Mark: XX
+03 
+""")
+        runner = create_runner(method1)
+        with runner.run() as instance:
+            instance.start()
 
+            with self.assertRaises(EngineError):
+                instance.run_ticks(5)
+
+            runner.clear_errors()
+            assert instance.engine.has_error_state()
+
+            instance.engine.set_method(method2)
+
+            instance.engine.schedule_execution(EngineCommandEnum.UNPAUSE)
+
+            instance.run_until_instruction("Mark", state="completed", arguments="XX", max_ticks=50)
+            self.assertEqual(["XX"], instance.marks_latest)
+
+   
+    def test_edit_thresholdnode_after_start(self):
+        method1 = Method.from_numbered_pcode("""\
+01 Base: s
+02 Macro: A
+03     Mark: A
+04 2.0 Mark: B
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Base: s
+02 Macro: A
+03     Mark: A
+04 2.0 Call macro: A
+""")
+        runner = create_runner(method1)
+        with runner.run() as instance:
+            instance.start()
+            #Run until threshold is started but not completed
+            instance.run_ticks(10)
+
+            instance.engine.set_method(method2)
+
+            instance.run_until_instruction("Mark", state="completed", arguments="A", max_ticks=50)
+            self.assertEqual(["A"], instance.marks_latest)            
+
+    def test_edit_node_with_finished_threshold_should_fail(self):
+        method1 = Method.from_numbered_pcode("""\
+01 Base: s
+02 Macro: A
+03     Mark: A
+04 0.5 Mark: B
+""")
+        method2 = Method.from_numbered_pcode("""\
+01 Base: s
+02 Macro: A
+03     Mark: A
+04 0.5 Call macro: A
+""")
+        runner = create_runner(method1)
+        with runner.run() as instance:
+            instance.start()
+            #Run until threshold is completed
+            instance.run_ticks(10)
+
+            with self.assertRaises(MethodEditError):
+                instance.engine.set_method(method2)
+
+            runner.clear_errors()
 
     def test_block_is_rerun_after_edit(self):
         # Previously executed block is re-run after edit #842, also covers crash found during that issue

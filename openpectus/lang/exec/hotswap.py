@@ -3,6 +3,7 @@ import logging
 
 from openpectus.lang.exec.errors import MethodEditError
 from openpectus.lang.exec.interpreter_models import InterpreterState, InterruptState, SePath
+from openpectus.lang.exec.runlog import RuntimeInfo
 from openpectus.lang.exec.visitor import NodeGenerator, NodeVisitor
 import openpectus.lang.model.ast as p
 
@@ -25,10 +26,11 @@ class HotSwapVisitor(NodeVisitor):
     It merely collects the state to apply in self.new_state.tree_state. It can
     then be applied afterwards to finalize the merge (by Interpreter.from_state())
     """
-    def __init__(self, old_program: p.ProgramNode, old_state: InterpreterState):
+    def __init__(self, old_program: p.ProgramNode, old_state: InterpreterState, runtimeinfo: RuntimeInfo):
         super().__init__()
         self.old_program: p.ProgramNode = old_program
         self.old_state: InterpreterState = old_state
+        self.runtimeinfo = runtimeinfo
         self.new_state: SomeInterpreterState = SomeInterpreterState()
         self.new_state.macros_registered = old_state.macros_registered
         self.new_state.interrupt_states = old_state.interrupt_states
@@ -44,9 +46,8 @@ class HotSwapVisitor(NodeVisitor):
             logger.debug(f"Node {node.key} is added and thus has no state from old program")
             return
 
-        old_node_is_whitespace = old_node.__class__ in [p.BlankNode, p.CommentNode]
         same_class = old_node.__class__.__name__ == node.__class__.__name__
-        if not same_class and old_node.started:
+        if not same_class and old_node.started and not old_node.failed and not old_node.awaiting_threshold:
             logger.error(f"Merge failed for Node {node.key}." +
                          f"Old node was started but its class {old_node.__class__.__name__} " +
                          f"does not match new node class {node.__class__.__name__}")
@@ -54,19 +55,17 @@ class HotSwapVisitor(NodeVisitor):
                                   "This is not a supported kind of edit")
         else:
             should_apply_state = True
-            if not same_class:  # corner case regarding idle/whitespace
-                if old_node_is_whitespace:
-                    should_apply_state = False
-                else:
-                    should_apply_state = False
-                    # raise MethodEditError(
-                    #     f"Node class mismatch, old class: {old_node.__class__}, new class: {node.__class__}")
+            if not same_class:  
+                should_apply_state = False
+            if old_node.failed:
+                self.runtimeinfo.remove(old_node.id)
+                should_apply_state = False
 
             if should_apply_state:
                 old_node_state = self.old_state.tree_state.get(node.id)
                 if old_node_state is not None:
                     logger.debug(f"Applying old state to node {node}")
-                    # save state to tree state so it can be applied leter
+                    # save state to tree state so it can be applied later
                     if not node.can_load_state(old_node_state):
                         logger.error(f"Cannot load state from {old_node_state["class_name"]} into {node.__class__}")
                         raise MethodEditError("State error")
