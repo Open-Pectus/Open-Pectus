@@ -21,6 +21,7 @@ export class DetailsActions {
   static controlStateFetchedFromUpdate = createAction(source + 'Control State Fetched From Update', props<{ controlState: ControlState }>());
   static controlStateChanged = createAction(source + 'Control State Changed',
     props<{ oldControlState: ControlState, newControlState: ControlState }>());
+  static controlCommandExecutionCancelled = createAction(source + 'Control Command Execution Cancelled');
   static controlCommandExecutionFailed = createAction(source + 'Control Command Execution Failed');
   static controlCommandExecutionSucceeded = createAction(source + 'Control Command Execution Succeeded');
   static recentRunDetailsInitialized = createAction(source + 'Recent Run Details Initialized');

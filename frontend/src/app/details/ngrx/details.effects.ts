@@ -10,7 +10,8 @@ import { PubSubService } from '../../shared/pub-sub.service';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
 import { DetailsActions } from './details.actions';
 import { DetailsSelectors } from './details.selectors';
-
+import { UnitControlCommands } from '../unit-control-commands.';
+import { MethodEditorSelectors } from '../method-editor/ngrx/method-editor.selectors';
 // noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class DetailsEffects {
@@ -84,9 +85,16 @@ export class DetailsEffects {
 
   executeUnitControlCommandWhenButtonClicked = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.processUnitCommandButtonClicked),
-    concatLatestFrom(() => this.store.select(DetailsSelectors.processUnitId)),
-    mergeMap(([{command}, unitId]) => {
+    concatLatestFrom(() => [
+      this.store.select(DetailsSelectors.processUnitId),
+      this.store.select(MethodEditorSelectors.isDirty),
+    ]),
+    mergeMap(([{command}, unitId, methodIsDirty]) => {
       if(unitId === undefined) return of();
+      if(command === UnitControlCommands.Start 
+        && methodIsDirty && !confirm("You have unsaved changes. Are you sure you want to start?")) {
+        return of(DetailsActions.controlCommandExecutionCancelled());
+      }
       return this.processUnitService.executeControlButtonCommand({unitId, requestBody: {command, source: 'unit_button'}}).pipe(
         map(() => DetailsActions.controlCommandExecutionSucceeded()),
         catchError(() => of(DetailsActions.controlCommandExecutionFailed())),
