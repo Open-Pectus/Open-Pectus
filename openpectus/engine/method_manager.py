@@ -436,7 +436,11 @@ class MethodManager:
             elif macro_or_alarm_is_blocking(node):
                 method_state.locked_line_ids.append(node.id)
             elif is_in_completed_block(node):
-                method_state.locked_line_ids.append(node.id)
+                if not node is all_nodes[-1]:
+                    method_state.locked_line_ids.append(node.id)
+                elif node is all_nodes[-1] and not isinstance(node, p.BlankNode):
+                    method_state.content_locked_line_ids.append(node.id)
+
             # injected node ids are created as negative integers
             id_int = as_int(node.id)
             if id_int is not None and id_int < 0:
