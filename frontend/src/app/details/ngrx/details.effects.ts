@@ -2,16 +2,18 @@ import { Injectable, inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
-import { catchError, delay, EMPTY, filter, map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
+import { catchError, delay, EMPTY, filter, firstValueFrom, map, mergeMap, of, switchMap, takeUntil } from 'rxjs';
 import { ProcessUnitService, RecentRunsService } from '../../api';
 import { AppSelectors } from '../../ngrx/app.selectors';
 import { selectRouteParam } from '../../ngrx/router.selectors';
 import { PubSubService } from '../../shared/pub-sub.service';
+import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { DetailsRoutingUrlParts } from '../details-routing-url-parts';
 import { DetailsActions } from './details.actions';
 import { DetailsSelectors } from './details.selectors';
 import { UnitControlCommands } from '../unit-control-commands.';
 import { MethodEditorSelectors } from '../method-editor/ngrx/method-editor.selectors';
+import { MethodEditorActions } from '../method-editor/ngrx/method-editor.actions';
 // noinspection JSUnusedGlobalSymbols
 @Injectable()
 export class DetailsEffects {
@@ -20,6 +22,7 @@ export class DetailsEffects {
   private processUnitService = inject(ProcessUnitService);
   private recentRunsService = inject(RecentRunsService);
   private pubSubService = inject(PubSubService);
+  private confirm = inject(ConfirmDialogService);
 
   fetchProcessValuesWhenPageInitialized = createEffect(() => this.actions.pipe(
     ofType(DetailsActions.unitDetailsInitialized),
@@ -89,16 +92,32 @@ export class DetailsEffects {
       this.store.select(DetailsSelectors.processUnitId),
       this.store.select(MethodEditorSelectors.isDirty),
     ]),
-    mergeMap(([{command}, unitId, methodIsDirty]) => {
-      if(unitId === undefined) return of();
-      if(command === UnitControlCommands.Start 
-        && methodIsDirty && !confirm("You have unsaved changes. Are you sure you want to start?")) {
-        return of(DetailsActions.controlCommandExecutionCancelled());
+    mergeMap(async ([{command}, unitId, methodIsDirty]) => {
+      if(unitId === undefined) return DetailsActions.controlCommandExecutionCancelled();
+      if(command === UnitControlCommands.Start && methodIsDirty) {
+        const choice = await this.confirm.ask('You have unsaved changes how do you want to proceed?', ['Save & Start', 'Revert changes & Start', 'Cancel']);
+        if (choice === 'Save & Start') {
+          //First subscribe to event, then await to ensure the event will be caught always.
+          const saveDone = firstValueFrom(this.actions.pipe(ofType(MethodEditorActions.modelSaved)));
+          this.store.dispatch(MethodEditorActions.saveButtonClicked());
+          await saveDone;
+        } else if (choice === 'Revert changes & Start') {
+          const revertDone = firstValueFrom(this.actions.pipe(ofType(MethodEditorActions.methodFetchedDueToUpdate)));
+          this.store.dispatch(MethodEditorActions.methodRefreshRequested({unitId}));
+          await revertDone;
+        } else if (choice === 'Cancel') {
+          return DetailsActions.controlCommandExecutionCancelled();
+        }
       }
-      return this.processUnitService.executeControlButtonCommand({unitId, requestBody: {command, source: 'unit_button'}}).pipe(
-        map(() => DetailsActions.controlCommandExecutionSucceeded()),
-        catchError(() => of(DetailsActions.controlCommandExecutionFailed())),
-      );
+
+      try {
+        await firstValueFrom(this.processUnitService.executeControlButtonCommand({
+          unitId, requestBody: { command, source: 'unit_button' },
+        }));
+        return DetailsActions.controlCommandExecutionSucceeded();
+      } catch {
+        return DetailsActions.controlCommandExecutionFailed();
+      }
     }),
   ));
 

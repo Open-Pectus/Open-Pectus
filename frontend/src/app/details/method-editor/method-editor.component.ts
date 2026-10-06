@@ -34,16 +34,40 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
         </div>
       }
       @if (!collapsed && methodEditorIsDirty()) {
-        <button (click)="onSaveButtonClicked()" content [disabled]="versionMismatch()"
-                class="bg-green-300 flex items-center text-black px-3 py-1.5 rounded-md absolute right-9 bottom-6 z-10"
-                [class.!bg-gray-200]="versionMismatch()">
-          <span class="codicon codicon-save !text-lg"></span>
-          <span class="ml-2">Save method</span>
-        </button>
+        <div floating class="flex flex-row items-center gap-2">
+          <button (click)="onRefreshButtonClicked()" [disabled]="versionMismatch()"
+                  class="bg-green-300 flex items-center text-black px-3 py-1.5 rounded-md"
+                  [class.!bg-gray-200]="versionMismatch()">
+            <span class="codicon codicon-discard !text-lg"></span>
+          </button>
+          <button (click)="onSaveButtonClicked()" [disabled]="versionMismatch()"
+                  class="bg-green-300 flex items-center text-black px-3 py-1.5 rounded-md"
+                  [class.!bg-gray-200]="versionMismatch()">
+            <span class="codicon codicon-save !text-lg"></span>
+            <span class="ml-2">Save method</span>
+          </button>
+        </div>
       }
     </app-collapsible-element>
   `,
 })
+
+/*
+<div content class="absolute right-9 bottom-6 z-10 flex flex-row items-center gap-2">
+          <button (click)="onRefreshButtonClicked()" [disabled]="versionMismatch()"
+                  class="bg-green-300 flex items-center text-black px-3 py-1.5 rounded-md"
+                  [class.!bg-gray-200]="versionMismatch()">
+            <span class="codicon codicon-discard !text-lg"></span>
+          </button>
+          <button (click)="onSaveButtonClicked()" [disabled]="versionMismatch()"
+                  class="bg-green-300 flex items-center text-black px-3 py-1.5 rounded-md"
+                  [class.!bg-gray-200]="versionMismatch()">
+            <span class="codicon codicon-save !text-lg"></span>
+            <span class="ml-2">Save method</span>
+          </button>
+        </div>
+*/
+
 export class MethodEditorComponent implements OnInit, OnDestroy {
   unitId = input<string>();
   recentRunId = input<string>();
@@ -91,6 +115,12 @@ export class MethodEditorComponent implements OnInit, OnDestroy {
 
   onContentHeightChanged() {
     this.editorSizeChange.next();
+  }
+
+  onRefreshButtonClicked() {
+    const unitId = this.unitId();
+    if(unitId === undefined) return;
+    this.store.dispatch(MethodEditorActions.methodRefreshRequested({unitId}));
   }
 
   forceRefreshMethod() {
