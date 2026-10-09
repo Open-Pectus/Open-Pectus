@@ -43,7 +43,8 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
           </button>
           <button (click)="onRefreshButtonClicked()" [disabled]="versionMismatch()"
                   class="bg-slate-100 flex items-center text-black px-3 py-1.5 rounded-md"
-                  [class.!bg-gray-200]="versionMismatch()">
+                  [class.!bg-gray-200]="versionMismatch()"
+                  title="Refresh: discard unsaved changes and reload the saved method">
             <span class="codicon codicon-discard !text-lg"></span>
           </button>
         </div>
