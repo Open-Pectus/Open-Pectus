@@ -108,7 +108,9 @@ const reducer = createReducer(initialState,
     if(command === UnitControlCommands.Hold) draft.optimisticClickedControlButtons.hold = true;
     if(command === UnitControlCommands.Unhold) draft.optimisticClickedControlButtons.hold = true;
   })),
-  on(DetailsActions.controlCommandExecutionFailed, state => produce(state, draft => {
+  on(DetailsActions.controlCommandExecutionFailed,
+     DetailsActions.controlCommandExecutionCancelled,
+     state => produce(state, draft => {
     draft.optimisticClickedControlButtons = {start: false, stop: false, pause: false, hold: false};
   })),
 );
