@@ -141,7 +141,7 @@ class MethodManager:
         self._validate_liveedit_method(new_method)
 
         logger.debug("Applying hotswap visitor to create merged state")
-        swapper = HotSwapVisitor(old_program=old_program, old_state=state)
+        swapper = HotSwapVisitor(old_program=old_program, old_state=state, runtimeinfo=self.interpreter.runtimeinfo)
         main_generator = swapper.run(new_program)
         while True:
             try:
@@ -248,15 +248,17 @@ class MethodManager:
         old_program = self._program
 
         # validate that the content of the new method does not conflict with the state of the running method
-        # this state is based off of Node.started and Node.completed. It does not consider Node.action_history
+        # this state is based off of Node locking. It does not consider Node.action_history
         method_state = self._get_method_state(old_program)
+        locked_ids = set(method_state.locked_line_ids).union(set(method_state.content_locked_line_ids))
+        logger.warning("Locked line IDs: %s", locked_ids)
         for new_line in new_method.lines:
-            if new_line.id in method_state.executed_line_ids or new_line.id in method_state.started_line_ids:
+            if new_line.id in locked_ids:
                 cur_line = next((line for line in old_method.lines if line.id == new_line.id), None)
                 if cur_line is not None and cur_line.content != new_line.content:
                     raise MethodEditError(
                         f"The line '{new_line.content}' with id {new_line.id} may not be edited, because it " +
-                        "has already started")
+                        "is locked.")
 
         # extract state for existing method
         existing_state = old_program.extract_tree_state()
@@ -432,7 +434,8 @@ class MethodManager:
                 add_locking(node)
             elif node.started:
                 method_state.started_line_ids.append(node.id)
-                add_locking(node)
+                if not node.awaiting_threshold:
+                    add_locking(node)
             elif macro_or_alarm_is_blocking(node):
                 method_state.locked_line_ids.append(node.id)
             elif is_in_completed_block(node):

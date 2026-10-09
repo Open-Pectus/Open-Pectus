@@ -88,6 +88,22 @@ class RuntimeInfo:
         # consider removing this property, is really an impl detail
         return [r for r in self._records if r.node_class_name != "NullNode"]
 
+    def remove(self, node_id: str) -> None:
+        record = next((r for r in self._records if r.node_id == node_id), None)
+        if record is None:
+            return
+        self._records.remove(record)
+        self._rebuild_indexes()
+
+    def _rebuild_indexes(self) -> None:
+        # Rebuild the node and instance record maps based on the current list of records
+        self._node_record_map = {r.node_id: i for i, r in enumerate(self._records)}
+        self._instance_record_map = {
+            st.instance_id: i
+            for i, r in enumerate(self._records)
+            for st in r.states
+        }
+
     def get_runlog(self) -> RunLog:
         """ Distill the runtime records into the simple RunLog shape that clients
         understand, basically a list of (instruction,state) for each instruction
