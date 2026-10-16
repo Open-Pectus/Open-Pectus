@@ -176,6 +176,7 @@ class Node(SupportCancelForce):
         self.has_argument: bool = False
 
         self.threshold: float | None = None
+        self.awaiting_threshold: bool = False
         self.indent_error: bool = False
 
         self.errors: list[Error] = []

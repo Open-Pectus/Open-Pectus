@@ -223,17 +223,20 @@ class PInterpreter(NodeVisitor):
         # alarm/macro nodes and their child nodes
         self.tracking.create_node_instance_id(node)
         try:
-            if not node.started and not node.completed:
-                if self._is_awaiting_threshold(node):
+            if not node.started:
+                node.started = True
+                self._set_awaiting_threshold(node)
+                if node.awaiting_threshold:
                     self.tracking.mark_awaiting_threshold(node)
 
-                while self._is_awaiting_threshold(node):
+                while node.awaiting_threshold:
+                    self._set_awaiting_threshold(node)
+                    if not node.awaiting_threshold:
+                        break
                     if self._is_in_ended_block(node): 
                         return
                     yield VisitResult.EndTick
 
-            # threshold has passed
-            node.started = True
             self.sep.push(node)
 
             try:
@@ -310,13 +313,19 @@ class PInterpreter(NodeVisitor):
                 logger.debug(f"Breaking child visit loop on child {child.key} because it is in an ended block")
                 break 
 
+            if any([c.failed for c in node.children]):
+                logger.debug(f"Breaking child visit loop on child {child.key} because a previous child has failed")
+                break
+
             child_result = self.visit(child)
             self.sep.push(node, f"child.{node.child_index}")
             yield from child_result
             self.sep.pop()
-            node.child_index += 1
-        
-        node.children_complete = True
+            if not child.failed:
+                node.child_index += 1
+
+        if not any([c.failed for c in node.children]):
+            node.children_complete = True
     
 # endregion General visit
 
@@ -875,6 +884,7 @@ class PInterpreter(NodeVisitor):
 
 
     def visit_ErrorInstructionNode(self, node: p.ErrorInstructionNode) -> NodeGenerator:
+        logger.warning("Visiting ErrorInstructionNode: %s", node.id)
         if __debug__:
             # enable the Noop (no operation) instruction used in tests
             if node.instruction_name == "Noop":
@@ -1008,9 +1018,10 @@ class PInterpreter(NodeVisitor):
         ]
         return locked_blocks_from_main + locked_blocks_from_injection
     
-    def _is_awaiting_threshold(self, node: p.Node):
+    def _set_awaiting_threshold(self, node: p.Node):
         if node.completed:
-            return False
+            node.awaiting_threshold = False
+            return
 
         if node.threshold is not None and not node.forced:
             base_unit = self.context.tags.get(SystemTagName.BASE).get_value()
@@ -1048,7 +1059,8 @@ class PInterpreter(NodeVisitor):
                     logger.debug(
                         f"Node {node} is awaiting threshold: {time_value_formatted} of {threshold_value}, " +
                         f"base unit: '{base_unit}'")
-                    return True
+                    node.awaiting_threshold = True
+                    return
 
                 logger.debug(
                     f"Node {node} is done awaiting threshold {time_value_formatted} of {threshold_value}, " +
@@ -1058,8 +1070,7 @@ class PInterpreter(NodeVisitor):
                     node,
                     "Threshold comparison error. Failed to compare " +
                     f"value '{time_value}' to threshold '{threshold_value}'") from ex
-        return False
-
+            node.awaiting_threshold = False
 
     def _evaluate_condition(self, node: p.NodeWithCondition) -> bool:
         c = node.tag_operator_value
