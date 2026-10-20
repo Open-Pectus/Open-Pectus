@@ -29,10 +29,16 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
              [class.-rotate-90]="collapsed"
              (click)="$event.stopPropagation(); toggleCollapsed()"></div>
       </div>
-      <div class="bg-white lg:rounded-sm mt-1 h-full outline-1 outline-gray-300" [class.transition-[height]]="!isDragging" #content
-           [class.overflow-hidden]="!contentOverflow()" [class.outline]="!collapsed"
-           [style.height.px]="height" (transitionend)="onTransitionEndContentContainer($event)">
-        <ng-content select="[content]" />
+      <!-- Shared grid cell bounds the sticky [floating] content to the content area -->
+      <div class="grid grid-cols-[minmax(0,1fr)]">
+        <div class="[grid-area:1/1] bg-white lg:rounded-sm mt-1 h-full outline-1 outline-gray-300" [class.transition-[height]]="!isDragging" #content
+             [class.overflow-hidden]="!contentOverflow()" [class.outline]="!collapsed"
+             [style.height.px]="height" (transitionend)="onTransitionEndContentContainer($event)">
+          <ng-content select="[content]" />
+        </div>
+        <div class="[grid-area:1/1] sticky bottom-6 place-self-end mt-7 mb-5 mr-9 z-10 empty:hidden">
+          <ng-content select="[floating]" />
+        </div>
       </div>
       <div class="absolute bottom-0 left-0 w-full h-1.5" [class.-mb-8]="widenDragHandler"
            [style.height.rem]="widenDragHandler ? 4 : null"
