@@ -140,7 +140,8 @@ Mark: C
 """)
         analyzer = UnreachableCodeCheckAnalyzer()
         analyzer.analyze(program)
-        self.assertListEqual(analyzer.items, [])
+        item = analyzer.items[0]
+        self.assertEqual(item.range, p.Range(p.Position(6, 0), p.Position(8, 0)))
 
 
     def test_no_commands_after_CallMacro(self):
@@ -154,7 +155,8 @@ Mark: C
 """)
         analyzer = UnreachableCodeCheckAnalyzer()
         analyzer.analyze(program)
-        self.assertListEqual(analyzer.items, [])
+        item = analyzer.items[0]
+        self.assertEqual(item.range, p.Range(p.Position(6, 0), p.Position(7, 0)))
 
 
 class InfiniteBlockCheckAnalyzerTest(unittest.TestCase):

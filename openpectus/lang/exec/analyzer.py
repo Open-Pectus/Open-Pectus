@@ -109,8 +109,7 @@ class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
     """
 
     TERMINATING_COMMANDS = ["Stop", "Restart"]
-    NON_ATOMIC_NODE_TYPES = (p.AlarmNode, p.CallMacroNode)
-
+    
     def __init__(self):
         super().__init__()
         self.method_end: p.EngineCommandNode | None = None
@@ -166,8 +165,6 @@ class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
 
     def find_termination(self, program: p.ProgramNode) -> p.Node | None:
         for node in self.iter_main_flow(program):
-            if isinstance(node, self.NON_ATOMIC_NODE_TYPES):
-                return None
             if isinstance(node, p.EngineCommandNode) and node.instruction_name in self.TERMINATING_COMMANDS:
                 return node
         return None
