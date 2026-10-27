@@ -1,6 +1,7 @@
 import unittest
 
 from openpectus.lang.exec.analyzer import (
+    AnalyzerItem,
     UnreachableCodeCheckAnalyzer,
     InfiniteBlockCheckAnalyzer,
     IndentationCheckAnalyzer,
@@ -22,6 +23,12 @@ from openpectus.test.engine.utility_methods import build_program
 
 
 class UnreachableCodeCheckAnalyzerTest(unittest.TestCase):
+
+    def is_unreachable(self, program: p.ProgramNode, item: AnalyzerItem, command: str):
+        all_nodes = program.get_all_nodes()
+        nodes_in_range = [n for n in all_nodes if n.position.line >= item.range.start.line and n.position.line < item.range.end.line]
+        return any(n.runlog_name == command for n in nodes_in_range)
+
     def test_command_after_end_block(self):
         program = build_program("""
 Block: A
@@ -34,7 +41,7 @@ Mark: c
         analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
         item = analyzer.items[0]
-        self.assertEqual(item.range, p.Range(p.Position(4, 4), p.Position(5, 0)))
+        self.assertTrue(self.is_unreachable(program, item, "Mark: b"))
 
     def test_command_after_end_blocks(self):
         program = build_program("""
@@ -48,7 +55,7 @@ Mark: c
         analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
         item = analyzer.items[0]
-        self.assertEqual(item.range, p.Range(p.Position(4, 4), p.Position(5, 0)))
+        self.assertTrue(self.is_unreachable(program, item, "Mark: b"))
 
     def test_block_command_after_end_block(self):
         program = build_program("""
@@ -63,7 +70,8 @@ Mark: c
         analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
         item = analyzer.items[0]
-        self.assertEqual(item.range, p.Range(p.Position(4, 4), p.Position(6, 0)))
+        self.assertTrue(self.is_unreachable(program, item, "Block: B"))
+        self.assertTrue(self.is_unreachable(program, item, "Mark: b"))
 
     def test_command_after_stop(self):
         program = build_program("""
@@ -75,7 +83,7 @@ Mark: B
         analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
         item = analyzer.items[0]
-        self.assertEqual(item.range, p.Range(p.Position(3, 0), p.Position(4, 0)))
+        self.assertTrue(self.is_unreachable(program, item, "Mark: B"))
 
     def test_commands_after_stop(self):
         program = build_program("""
@@ -89,9 +97,8 @@ Mark: C
         analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
         item = analyzer.items[0]
-        self.assertEqual(item.range, p.Range(p.Position(3, 0), p.Position(6, 0)))
+        self.assertTrue(self.is_unreachable(program, item, "Mark: C"))
 
-    @unittest.skip(reason="Fix in issue #936")
     def test_commands_after_stop_in_block(self):
         program = build_program("""
 Mark: A
@@ -103,7 +110,8 @@ Mark: C
         analyzer = UnreachableCodeCheckAnalyzer()
         analyzer.analyze(program)
         self.assertEqual(1, len(analyzer.items))
-        #self.assertListEqual(analyzer.items, [])
+        item = analyzer.items[0]
+        self.assertTrue(self.is_unreachable(program, item, "Mark: C"))
 
     def test_no_commands_after_stop_in_conditional(self):
         program = build_program("""
@@ -117,6 +125,46 @@ Mark: C
         analyzer.analyze(program)
         self.assertListEqual(analyzer.items, [])
 
+    def test_no_commands_after_stop_in_macro(self):
+        program = build_program("""
+Mark: A
+Macro: M
+    Stop
+Mark: C
+""")
+        analyzer = UnreachableCodeCheckAnalyzer()
+        analyzer.analyze(program)
+        self.assertListEqual(analyzer.items, [])
+
+    def test_no_commands_after_alarm(self):
+        program = build_program("""
+Alarm: Block Time > 1 s
+    Stop
+        
+Mark: A
+Stop
+Mark: B
+Mark: C
+""")
+        analyzer = UnreachableCodeCheckAnalyzer()
+        analyzer.analyze(program)
+        item = analyzer.items[0]
+        self.assertTrue(self.is_unreachable(program, item, "Mark: B"))
+        self.assertTrue(self.is_unreachable(program, item, "Mark: C"))
+
+    def test_no_commands_after_CallMacro(self):
+        program = build_program("""
+Mark: A
+Macro: M
+    Mark: B
+Call macro: M
+Stop
+Mark: C
+""")
+        analyzer = UnreachableCodeCheckAnalyzer()
+        analyzer.analyze(program)
+        item = analyzer.items[0]
+        self.assertTrue(self.is_unreachable(program, item, "Mark: C"))
 
 class InfiniteBlockCheckAnalyzerTest(unittest.TestCase):
     def test_missing_global_end(self):

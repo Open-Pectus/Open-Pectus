@@ -108,6 +108,8 @@ class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
     * Presence of code after "Stop" and "Restart" commands
     """
 
+    TERMINATING_COMMANDS = ["Stop", "Restart"]
+    
     def __init__(self):
         super().__init__()
         self.method_end: p.EngineCommandNode | None = None
@@ -150,17 +152,42 @@ class UnreachableCodeCheckAnalyzer(AnalyzerVisitorBase):
 
     def analyze(self, n):
         super().analyze(n)
-        if self.method_end and self.first_command_after_end and self.last_command_after_end:
-            item = AnalyzerItem(
-                "UnreachableCode",
-                "Unreachable code",
-                self.first_command_after_end,
-                AnalyzerItemType.WARNING,
-                f"There is no path to this code because the method will end at line {self.method_end.position.line+1}.",
-            )
-            item.range.end.character = 0
-            item.range.end.line = self.last_command_after_end.position.line+1
-            self.add_item(item)
+        self.check_code_after_termination(n)
+
+    def iter_main_flow(self, node: p.NodeWithChildren):
+        """ Yield nodes in execution order, entering Block bodies but not Watch/Alarm/Macro bodies. """
+        for child in node.children:
+            if isinstance(child, p.WhitespaceNode):
+                continue
+            yield child
+            if isinstance(child, p.BlockNode):
+                yield from self.iter_main_flow(child)
+
+    def find_termination(self, program: p.ProgramNode) -> p.Node | None:
+        for node in self.iter_main_flow(program):
+            if isinstance(node, p.EngineCommandNode) and node.instruction_name in self.TERMINATING_COMMANDS:
+                return node
+        return None
+
+    def check_code_after_termination(self, program: p.ProgramNode):
+        termination = self.find_termination(program)
+        if termination is None:
+            return
+        unreachable = [
+            n for n in program.get_child_nodes(recursive=True)
+            if not isinstance(n, p.WhitespaceNode) and n.position.line > termination.position.line
+        ]
+        if not unreachable:
+            return
+        item = AnalyzerItem(
+            "UnreachableCode",
+            "Unreachable code",
+            unreachable[0],
+            AnalyzerItemType.WARNING,
+            f"There is no path to this code because the method will end at line {termination.position.line+1}.",
+        )
+        item.range.end = p.Position(unreachable[-1].position.line + 1, 0)
+        self.add_item(item)
 
 
 class InfiniteBlockCheckAnalyzer(AnalyzerVisitorBase):
