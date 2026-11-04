@@ -26,13 +26,19 @@ import { ProcessValuePipe } from './app/shared/pipes/process-value.pipe';
 
 import { handlers } from './msw/handlers';
 import { MswEnablement } from './msw/msw-enablement';
+import { HttpNetworkFrame } from 'msw/experimental';
 
 async function enableMocking() {
   if(!MswEnablement.isEnabled) return;
   const worker = setupWorker(...handlers);
   return worker.start({
     quiet: true,
-    onUnhandledRequest: (request: Request) => {
+    onUnhandledFrame: ({frame, defaults}) => {
+      if(!(frame instanceof HttpNetworkFrame)) {
+        return;
+      }
+
+      const request = frame.data.request;
       const url = new URL(request.url);
       const pathname = url.pathname;
       if(pathname.startsWith('/assets')
@@ -49,7 +55,8 @@ async function enableMocking() {
       ) {
         return;
       }
-      console.warn(`url ${request.url} was not mocked by MSW`);
+      defaults.warn();
+      // console.warn(`url ${request.url} was not mocked by MSW`);
     },
   });
 }
