@@ -14,7 +14,7 @@ import {
 // import '@codingame/monaco-vscode-json-default-extension';
 // import '@codingame/monaco-vscode-theme-defaults-default-extension';
 import { editor as MonacoEditor, Range } from '@codingame/monaco-vscode-editor-api';
-import { ToastrService } from 'ngx-toastr';
+import { ToastrService } from '@openng/ngx-toastr';
 import { Observable } from 'rxjs';
 import { MonacoEditorBehaviours } from './monaco-editor-behaviours';
 import { MonacoWrapper } from './monaco-wrapper';

@@ -11,7 +11,7 @@ import { provideStore, Store } from '@ngrx/store';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { provideAuth, StsConfigLoader } from 'angular-auth-oidc-client';
 import { setupWorker } from 'msw/browser';
-import { provideToastr } from 'ngx-toastr';
+import { provideToastr } from '@openng/ngx-toastr';
 import { AuthService } from './app/api';
 import { AppComponent } from './app/app.component';
 import { APP_ROUTES } from './app/app.routes';
