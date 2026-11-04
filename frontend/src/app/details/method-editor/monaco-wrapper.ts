@@ -1,6 +1,6 @@
 import { EditorApp } from 'monaco-languageclient/editorApp';
 import { MonacoVscodeApiConfig, MonacoVscodeApiWrapper } from 'monaco-languageclient/vscodeApiWrapper';
-import { LanguageClientConfig, LanguageClientWrapper } from 'monaco-languageclient/lcwrapper';
+import { LanguageClientConfig, LanguageClientWrapper, LcWebSocket } from 'monaco-languageclient/lcwrapper';
 import { useWorkerFactory, Worker, WorkerFactoryConfig } from 'monaco-languageclient/workerFactory';
 
 export class MonacoWrapper {
@@ -102,8 +102,9 @@ export class MonacoWrapper {
       },
       connection: {
         options: {
-          $type: 'WebSocketUrl',
-          url: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/lsp/websocket`,
+          $family: 'WebSocket',
+          realization: () => new LcWebSocket(),
+          webSocketUrl: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/api/lsp/websocket`,
           // startOptions: { onCall: () => { console.log('Connected to socket.'); }, reportStatus: false,},
           // stopOptions: { onCall: () => { console.log('Disconnected from socket.'); }, reportStatus: false, },
         },

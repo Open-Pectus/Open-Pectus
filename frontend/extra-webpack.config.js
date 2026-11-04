@@ -34,6 +34,9 @@ const config = {
     extensions: ['.ts', '.js', '.json', '.ttf'],
     fallback: {vm: false, fs: false, module: false},
   },
+  externals: {
+    'node:fs/promises': 'commonjs node:fs/promises',
+  },
   experiments: {
     topLevelAwait: true,
   },

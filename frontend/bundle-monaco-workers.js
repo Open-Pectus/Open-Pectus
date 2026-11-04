@@ -21,4 +21,7 @@ export default {
   performance: {
     hints: false,
   },
+  externals: {
+    'node:fs/promises': 'commonjs node:fs/promises',
+  },
 };

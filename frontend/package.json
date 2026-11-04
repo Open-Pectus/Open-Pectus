@@ -34,10 +34,10 @@
     "d3": "^7.8.5",
     "date-fns": "^4.1.0",
     "immer": "^11.1.4",
-    "monaco-languageclient": "^10.7.0",
+    "monaco-languageclient": "^11.0.3",
     "rxjs": "~7.8.0",
     "tslib": "2.8",
-    "vscode-ws-jsonrpc": "^3.3.2"
+    "vscode-ws-jsonrpc": "^4.0.3"
   },
   "devDependencies": {
     "@angular-builders/custom-webpack": "^22.0.1",
