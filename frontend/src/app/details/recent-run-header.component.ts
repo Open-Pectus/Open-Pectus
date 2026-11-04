@@ -12,8 +12,8 @@ import { DetailsSelectors } from './ngrx/details.selectors';
   template: `
     <div class="text-slate-700 mb-1 relative">
       <div class="text-xs flex gap-4 mb-2">
-        <span>Started at: <b class="whitespace-nowrap">{{ $safeNavigationMigration(recentRun()?.started_date) | date }}</b></span>
-        <span>Finished at: <b class="whitespace-nowrap">{{ $safeNavigationMigration(recentRun()?.completed_date) | date }}</b></span>
+        <span>Started at: <b class="whitespace-nowrap">{{ recentRun()?.started_date | date }}</b></span>
+        <span>Finished at: <b class="whitespace-nowrap">{{ recentRun()?.completed_date | date }}</b></span>
         <span>Contributions by: <b>{{ formatContributors(recentRun()) }}</b></span>
         <span>Uod author: <b>{{ recentRun()?.uod_author_name }} <{{ recentRun()?.uod_author_email }}></b></span>
       </div>
@@ -21,12 +21,12 @@ import { DetailsSelectors } from './ngrx/details.selectors';
 
       <div class="absolute top-0 right-0 flex gap-3">
         <button class="px-3 py-1.5 rounded-md bg-sky-900 text-white flex items-center"
-                (click)="downloadCsv($safeNavigationMigration(recentRun()?.run_id))">
+                (click)="downloadCsv(recentRun()?.run_id)">
           <i class="codicon codicon-desktop-download !text-xl mr-2.5"></i>
           Plot CSV file
         </button>
         <button class="px-3 py-1.5 rounded-md bg-sky-900 text-white flex items-center"
-                (click)="downloadArchive($safeNavigationMigration(recentRun()?.run_id))">
+                (click)="downloadArchive(recentRun()?.run_id)">
           <i class="codicon codicon-desktop-download !text-xl mr-2.5"></i>
           Archive file
         </button>

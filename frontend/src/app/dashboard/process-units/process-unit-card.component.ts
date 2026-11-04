@@ -6,23 +6,23 @@ import { ProcessUnitStatePipe } from '../../shared/pipes/process-unit-state.pipe
 import { UtilMethods } from '../../shared/util-methods';
 
 @Component({
-    selector: 'app-process-unit-card',
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [
-        NgClass,
-        FormatDurationMsecPipe,
-        ProcessUnitStatePipe,
-    ],
-    template: `
+  selector: 'app-process-unit-card',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    NgClass,
+    FormatDurationMsecPipe,
+    ProcessUnitStatePipe,
+  ],
+  template: `
     <div class="rounded-md shadow-md cursor-pointer bg-stone-100 hover:brightness-95">
       <div [class]="'px-5 py-3 text-white rounded-t-md flex justify-between ' + backgroundColor">
         <div class="font-semibold text-lg">{{ processUnit()?.name }}</div>
         <div class="ml-2 codicon !text-xl" [ngClass]="statusIcon"></div>
       </div>
       <div class="px-5 py-4 ">
-        <div>State: {{ $safeNavigationMigration(processUnit()?.state?.state) | processUnitState }}</div>
+        <div>State: {{ processUnit()?.state?.state | processUnitState }}</div>
         <div>Location: {{ processUnit()?.location }}</div>
-        <div>Runtime: {{ $safeNavigationMigration(processUnit()?.runtime_msec) | formatDurationMsec }}</div>
+        <div>Runtime: {{ processUnit()?.runtime_msec | formatDurationMsec }}</div>
       </div>
     </div>
   `

@@ -23,21 +23,21 @@ import { ProcessValuesCategorizedComponent } from './process-values-categorized.
   template: `
     <app-collapsible-element [name]="'Process Values'" (collapseStateChanged)="collapsed = $event" [codiconName]="'codicon-dashboard'">
       <app-toggle-button [label]="'All Process Values'" buttons [checked]="allProcessValues()"
-                         (changed)="onToggleAllProcessValues($event)" />
+                         (changed)="onToggleAllProcessValues($event)"/>
 
       @if (!collapsed) {
         <div class="py-2 px-1 lg:px-2" content>
           <app-process-values-categorized [processValues]="processValues()"
-                                          (openCommands)="onOpenCommands($event)" />
+                                          (openCommands)="onOpenCommands($event)"/>
         </div>
       }
 
       @if (showCommands) {
         <app-process-value-commands popover class="absolute p-0 block overflow-visible"
-                                    [processValueCommands]="$safeNavigationMigration(pvAndPositionForPopover?.processValue?.commands)"
+                                    [processValueCommands]="pvAndPositionForPopover?.processValue?.commands"
                                     (shouldClose)="onCloseCommands($event)"
                                     [style.left.px]="pvAndPositionForPopover?.position?.x"
-                                    [style.top.px]="pvAndPositionForPopover?.position?.y" />
+                                    [style.top.px]="pvAndPositionForPopover?.position?.y"/>
       }
     </app-collapsible-element>
   `,

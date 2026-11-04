@@ -1,14 +1,5 @@
 import { DatePipe } from '@angular/common';
-import {
-  AfterViewInit,
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-  Component,
-  computed,
-  inject,
-  input,
-  output
-} from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, input, output } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { RunLogLine } from '../../../api';
 import { RunLogActions } from '../ngrx/run-log.actions';
@@ -38,13 +29,13 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
          (click)="toggleCollapse(expanded())">
       <div class="grid gap-2 px-3 py-2" [style.grid]="gridFormat()">
         <p>{{ isQueued() ? "Queued" : (runLogLine()?.start ?? "" | date) }}</p>
-        @if ($safeNavigationMigration(runLogLine()?.end) !== undefined) {
+        @if (runLogLine()?.end !== undefined) {
           <p>{{ runLogLine()?.end ?? '' | date }}</p>
         }
-          @if ($safeNavigationMigration(runLogLine()?.end) === undefined && !isQueued()) {
+        @if (runLogLine()?.end === undefined && !isQueued()) {
           <app-run-log-line-progress
-            [value]="$safeNavigationMigration(runLogLine()?.progress)"
-            class="py-0.5"
+              [value]="runLogLine()?.progress"
+              class="py-0.5"
           />
         }
         @if (isQueued()) {
@@ -53,12 +44,12 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
         <p>{{ runLogLine()?.command?.command }}</p>
         <div class="col-end-6 flex gap-2">
           @if (runLogLine()?.forcible) {
-            <app-run-log-line-force-button [lineId]="$safeNavigationMigration(runLogLine()?.id)"
-                                           (click)="$event.stopPropagation()" />
+            <app-run-log-line-force-button [lineId]="runLogLine()?.id"
+                                           (click)="$event.stopPropagation()"/>
           }
           @if (runLogLine()?.cancellable) {
-            <app-run-log-line-cancel-button [lineId]="$safeNavigationMigration(runLogLine()?.id)"
-                                            (click)="$event.stopPropagation()" />
+            <app-run-log-line-cancel-button [lineId]="runLogLine()?.id"
+                                            (click)="$event.stopPropagation()"/>
           }
         </div>
       </div>
@@ -74,11 +65,11 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
           }
           @if (runLogLine()?.start_values?.length) {
             <app-run-log-additional-values [type]="AdditionalValueType.Start"
-                                           [values]="$safeNavigationMigration(runLogLine()?.start_values)" />
+                                           [values]="runLogLine()?.start_values"/>
           }
           @if (runLogLine()?.end_values?.length) {
             <app-run-log-additional-values [type]="AdditionalValueType.End"
-                                           [values]="$safeNavigationMigration(runLogLine()?.end_values)" />
+                                           [values]="runLogLine()?.end_values"/>
           }
         </div>
       </div>
@@ -118,8 +109,8 @@ export class RunLogLineComponent implements AfterViewInit {
                         ? RunLogActions.collapseLine({id: runLogLine.id})
                         : RunLogActions.expandLine({id: runLogLine.id}));
   }
-  
+
   protected isQueued = computed(() => {
-    return this.runLogLine()?.id === "QueuedCommand";
+    return this.runLogLine()?.id === 'QueuedCommand';
   });
 }

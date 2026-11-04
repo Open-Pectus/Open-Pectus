@@ -1,6 +1,6 @@
 import { DATE_PIPE_DEFAULT_OPTIONS, DatePipe, DecimalPipe } from '@angular/common';
 import '@angular/common/locales/global/da';
-import { provideHttpClient, withInterceptors, withXhr } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { isDevMode, LOCALE_ID, provideZonelessChangeDetection } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { PreloadAllModules, provideRouter, withPreloading } from '@angular/router';
@@ -95,7 +95,7 @@ enableMocking().then(() => bootstrapApplication(AppComponent, {
         deps: [AuthService, Store],
       },
     }),
-    provideHttpClient(withXhr(), withInterceptors([httpErrorInterceptor, authInterceptor])),
+    provideHttpClient(withInterceptors([httpErrorInterceptor, authInterceptor])),
     {provide: LOCALE_ID, useValue: 'da-DK'},
     DatePipe,
     DecimalPipe,

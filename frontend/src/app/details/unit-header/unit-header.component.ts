@@ -14,11 +14,11 @@ import { UnitControlsComponent } from './unit-controls.component';
     <div class="flex justify-between">
       <div>
         <div class="mb-2 text-xs flex gap-4">
-          <span>Your role: <b>{{ $safeNavigationMigration(processUnit()?.current_user_role) | titlecase }}</b></span>
+          <span>Your role: <b>{{ processUnit()?.current_user_role | titlecase }}</b></span>
           <span>Uod author: <b>{{ processUnit()?.uod_author_name }} <{{ processUnit()?.uod_author_email }}></b></span>
         </div>
         <h1 class="text-4xl lg:text-5xl font-bold text-slate-700 mb-4">{{ processUnit()?.name }}</h1>
-        <app-unit-controls />
+        <app-unit-controls/>
         <div class="text-rose-800 mt-2 font-bold">
           @if (processUnit()?.state?.state === 'error') {
             Interrupted by error! Please see the Error Log below.
@@ -34,7 +34,7 @@ import { UnitControlsComponent } from './unit-controls.component';
           <span class="text-xs">Other active users:</span>
           <div class="grid grid-rows-5 items-end gap-y-1.5 gap-x-3 grid-flow-col" dir="rtl">
             @for (activeUser of otherActiveUsers(); track activeUser.id) {
-              <app-active-user [activeUser]="activeUser" dir="ltr" />
+              <app-active-user [activeUser]="activeUser" dir="ltr"/>
             }
           </div>
         </div>
