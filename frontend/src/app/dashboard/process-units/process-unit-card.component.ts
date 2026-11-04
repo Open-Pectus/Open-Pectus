@@ -20,9 +20,9 @@ import { UtilMethods } from '../../shared/util-methods';
         <div class="ml-2 codicon !text-xl" [ngClass]="statusIcon"></div>
       </div>
       <div class="px-5 py-4 ">
-        <div>State: {{ processUnit()?.state?.state | processUnitState }}</div>
+        <div>State: {{ $safeNavigationMigration(processUnit()?.state?.state) | processUnitState }}</div>
         <div>Location: {{ processUnit()?.location }}</div>
-        <div>Runtime: {{ processUnit()?.runtime_msec | formatDurationMsec }}</div>
+        <div>Runtime: {{ $safeNavigationMigration(processUnit()?.runtime_msec) | formatDurationMsec }}</div>
       </div>
     </div>
   `

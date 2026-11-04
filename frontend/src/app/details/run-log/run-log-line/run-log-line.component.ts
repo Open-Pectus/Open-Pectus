@@ -38,12 +38,12 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
          (click)="toggleCollapse(expanded())">
       <div class="grid gap-2 px-3 py-2" [style.grid]="gridFormat()">
         <p>{{ isQueued() ? "Queued" : (runLogLine()?.start ?? "" | date) }}</p>
-        @if (runLogLine()?.end !== undefined) {
+        @if ($safeNavigationMigration(runLogLine()?.end) !== undefined) {
           <p>{{ runLogLine()?.end ?? '' | date }}</p>
         }
-          @if (runLogLine()?.end === undefined && !isQueued()) {
+          @if ($safeNavigationMigration(runLogLine()?.end) === undefined && !isQueued()) {
           <app-run-log-line-progress
-            [value]="runLogLine()?.progress"
+            [value]="$safeNavigationMigration(runLogLine()?.progress)"
             class="py-0.5"
           />
         }
@@ -53,11 +53,11 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
         <p>{{ runLogLine()?.command?.command }}</p>
         <div class="col-end-6 flex gap-2">
           @if (runLogLine()?.forcible) {
-            <app-run-log-line-force-button [lineId]="runLogLine()?.id"
+            <app-run-log-line-force-button [lineId]="$safeNavigationMigration(runLogLine()?.id)"
                                            (click)="$event.stopPropagation()" />
           }
           @if (runLogLine()?.cancellable) {
-            <app-run-log-line-cancel-button [lineId]="runLogLine()?.id"
+            <app-run-log-line-cancel-button [lineId]="$safeNavigationMigration(runLogLine()?.id)"
                                             (click)="$event.stopPropagation()" />
           }
         </div>
@@ -74,11 +74,11 @@ import { RunLogLineProgressComponent } from './run-log-line-progress.component';
           }
           @if (runLogLine()?.start_values?.length) {
             <app-run-log-additional-values [type]="AdditionalValueType.Start"
-                                           [values]="runLogLine()?.start_values" />
+                                           [values]="$safeNavigationMigration(runLogLine()?.start_values)" />
           }
           @if (runLogLine()?.end_values?.length) {
             <app-run-log-additional-values [type]="AdditionalValueType.End"
-                                           [values]="runLogLine()?.end_values" />
+                                           [values]="$safeNavigationMigration(runLogLine()?.end_values)" />
           }
         </div>
       </div>

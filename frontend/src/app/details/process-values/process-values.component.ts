@@ -34,7 +34,7 @@ import { ProcessValuesCategorizedComponent } from './process-values-categorized.
 
       @if (showCommands) {
         <app-process-value-commands popover class="absolute p-0 block overflow-visible"
-                                    [processValueCommands]="pvAndPositionForPopover?.processValue?.commands"
+                                    [processValueCommands]="$safeNavigationMigration(pvAndPositionForPopover?.processValue?.commands)"
                                     (shouldClose)="onCloseCommands($event)"
                                     [style.left.px]="pvAndPositionForPopover?.position?.x"
                                     [style.top.px]="pvAndPositionForPopover?.position?.y" />

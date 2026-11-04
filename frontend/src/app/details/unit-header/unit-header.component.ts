@@ -14,7 +14,7 @@ import { UnitControlsComponent } from './unit-controls.component';
     <div class="flex justify-between">
       <div>
         <div class="mb-2 text-xs flex gap-4">
-          <span>Your role: <b>{{ processUnit()?.current_user_role | titlecase }}</b></span>
+          <span>Your role: <b>{{ $safeNavigationMigration(processUnit()?.current_user_role) | titlecase }}</b></span>
           <span>Uod author: <b>{{ processUnit()?.uod_author_name }} <{{ processUnit()?.uod_author_email }}></b></span>
         </div>
         <h1 class="text-4xl lg:text-5xl font-bold text-slate-700 mb-4">{{ processUnit()?.name }}</h1>

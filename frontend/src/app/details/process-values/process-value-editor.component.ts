@@ -16,7 +16,7 @@ export interface ValueAndUnit {
       <input #inputElement class="p-1 pl-2 outline-none border-l border-y border-gray-300 rounded-l-md w-32" type="text"
              [class.bg-red-500]="!isValid"
              (input)="onInput(inputElement.value)" (blur)="inputBlur.emit($event)"
-             [value]="command()?.value | processValue" (focus)="onFocusInput()"
+             [value]="$safeNavigationMigration(command()?.value) | processValue" (focus)="onFocusInput()"
              (keyup.enter)="onSaveInput(inputElement.value)">
       <button #saveButtonElement class="px-3 py-2 rounded-r-md bg-green-400 text-gray-800 font-semibold"
               [class.bg-vscode-background-grey-hover]="!isValid" tabindex="-1"

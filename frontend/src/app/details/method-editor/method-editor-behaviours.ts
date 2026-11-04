@@ -2,7 +2,7 @@ import { editor as MonacoEditor, KeyCode, KeyMod, Range } from '@codingame/monac
 import { concatLatestFrom } from '@ngrx/operators';
 import { Store } from '@ngrx/store';
 import { combineLatest, filter, Observable, takeUntil } from 'rxjs';
-import { MethodLine } from 'src/app/api';
+import { MethodLine } from '../../api';
 import { UtilMethods } from '../../shared/util-methods';
 import { MethodEditorActions } from './ngrx/method-editor.actions';
 import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
@@ -113,8 +113,9 @@ export class MethodEditorBehaviours {
     }
   }
 
-  private setupLockingLockedAndContentLockedLines(lockedCollection: MonacoEditor.IEditorDecorationsCollection, contentLockedCollection: MonacoEditor.IEditorDecorationsCollection) {
-    
+  private setupLockingLockedAndContentLockedLines(lockedCollection: MonacoEditor.IEditorDecorationsCollection,
+                                                  contentLockedCollection: MonacoEditor.IEditorDecorationsCollection) {
+
     const linesFrom = (c: MonacoEditor.IEditorDecorationsCollection) =>
       c.getRanges().flatMap(r => UtilMethods.getNumberRange(r.startLineNumber, r.endLineNumber));
 
@@ -122,16 +123,16 @@ export class MethodEditorBehaviours {
       this.editor.getSelections()?.some(selection =>
         lineNumbers.some(ln => selection.intersectRanges(new Range(ln, 0, ln + 1, 0))),
       ) ?? false;
-    
+
     const lockEditorIfSelectionIntersectsLockedLines = () => {
       const inLocked = selectionIntersectsLines(linesFrom(lockedCollection));
       const inContentLocked = selectionIntersectsLines(linesFrom(contentLockedCollection));
 
       const locking = inLocked
-        ? {readOnly: true, readOnlyMessage: {value: 'This line is locked.'}}
-        : inContentLocked
-          ? {readOnly: true, readOnlyMessage: {value: 'This line is content-locked. Press Enter to add a new line below.'}}
-          : {readOnly: false, readOnlyMessage: {value: ''}};
+                      ? {readOnly: true, readOnlyMessage: {value: 'This line is locked.'}}
+                      : inContentLocked
+                        ? {readOnly: true, readOnlyMessage: {value: 'This line is content-locked. Press Enter to add a new line below.'}}
+                        : {readOnly: false, readOnlyMessage: {value: ''}};
       this.editor.updateOptions(locking);
 
     };
@@ -168,13 +169,13 @@ export class MethodEditorBehaviours {
       const onLocked = selectionIntersectsLines(lockedLines);
       const onContentLocked = selectionIntersectsLines(contentLockedLines);
 
-      if (onContentLocked && !onLocked && event.keyCode === KeyCode.Enter) {
+      if(onContentLocked && !onLocked && event.keyCode === KeyCode.Enter) {
         event.preventDefault();
         event.stopPropagation();
         const sel = this.editor.getSelection();
-        if (!sel) return;
+        if(!sel) return;
         const eol = this.editor.getModel()?.getLineMaxColumn(sel.startLineNumber) ?? 1;
-        this.editor.updateOptions({ readOnly: false });
+        this.editor.updateOptions({readOnly: false});
         this.editor.executeEdits('content-locked-enter', [{
           range: new Range(sel.startLineNumber, eol, sel.startLineNumber, eol),
           text: '\n',
