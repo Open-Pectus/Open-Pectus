@@ -26,7 +26,6 @@ import { ProcessValuePipe } from './app/shared/pipes/process-value.pipe';
 
 import { handlers } from './msw/handlers';
 import { MswEnablement } from './msw/msw-enablement';
-import { provideAnimations } from '@angular/platform-browser/animations';
 
 async function enableMocking() {
   if(!MswEnablement.isEnabled) return;
@@ -83,7 +82,6 @@ enableMocking().then(() => bootstrapApplication(AppComponent, {
       ],
     }),
     provideRouter(APP_ROUTES, withPreloading(PreloadAllModules)),
-    provideAnimations(),
     provideToastr({
       progressBar: true,
       progressAnimation: 'increasing',

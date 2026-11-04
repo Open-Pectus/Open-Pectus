@@ -16,13 +16,11 @@
   },
   "private": true,
   "dependencies": {
-    "@angular/animations": "^22.2.4",
     "@angular/common": "^22.2.4",
     "@angular/compiler": "^22.2.4",
     "@angular/core": "^22.2.4",
     "@angular/forms": "^22.2.4",
     "@angular/platform-browser": "^22.2.4",
-    "@angular/platform-browser-dynamic": "^22.2.4",
     "@angular/router": "^22.2.4",
     "@angular/service-worker": "^22.2.4",
     "@ngrx/effects": "^22.0.1",
