@@ -21,6 +21,8 @@ export default {
   performance: {
     hints: false,
   },
+
+  // see comment in extra-webpack.config.js
   externals: {
     'node:fs/promises': 'commonjs node:fs/promises',
   },
