@@ -12,7 +12,7 @@ export class ConfirmDialogService {
       buttons.forEach(b => {
         const btn = document.createElement('button');
         btn.textContent = b;
-        btn.className = 'rounded p-1 px-3 bg-sky-700 text-white';
+        btn.className = 'rounded-sm p-1 px-3 bg-sky-700 text-white';
         btn.onclick = () => { dlg.close(); resolve(b); };
         row.appendChild(btn);
       });

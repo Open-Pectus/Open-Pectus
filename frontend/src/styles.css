@@ -1,0 +1,34 @@
+@import 'tailwindcss';
+
+.absolute-center {
+  @apply absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2;
+}
+
+html, body {
+  font-family: 'Open Sans', sans-serif;
+  --vscode-icon-foreground: unset !important;
+  --ping-pong-x: ping-pong-x 1.4s linear alternate infinite;
+}
+
+@font-face {
+  font-family: 'Open Sans';
+  src: url('/assets/fonts/OpenSans-VariableFont.ttf');
+}
+
+@keyframes ping-pong-x {
+  from {
+    transform: translateX(0);
+    left: 0;
+  }
+  to {
+    transform: translateX(-100%);
+    left: 100%;
+  }
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}

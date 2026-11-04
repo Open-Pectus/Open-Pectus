@@ -14,7 +14,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
         </div>
       }
       @if (_value === undefined) {
-        <div class="bg-sky-600 saturate-50 h-full rounded-md w-1/3 relative animate-ping-pong-x"
+        <div class="bg-sky-600 saturate-50 h-full rounded-md w-1/3 relative animate-(--ping-pong-x)"
         ></div>
       }
       @if (_value !== undefined) {

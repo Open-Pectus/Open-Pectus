@@ -10,10 +10,10 @@ import { DetailsSelectors } from './ngrx/details.selectors';
       <span class="absolute-center lg:text-xl font-bold whitespace-nowrap flex flex-col gap-4 items-center">
       <p>You are missing one of these roles:</p>
       <p>{{ missingRoles() }}</p>
-      <button class="bg-slate-600 rounded text-white px-4 py-2" (click)="refreshToken()">Force refresh session and try again</button>
+      <button class="bg-slate-600 rounded-sm text-white px-4 py-2" (click)="refreshToken()">Force refresh session and try again</button>
     </span>
     } @else {
-      <ng-content />
+      <ng-content/>
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush

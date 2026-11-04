@@ -21,7 +21,7 @@ import { DetailsSelectors } from './ngrx/details.selectors';
           @if (processDiagram()?.svg === '') {
             <div class="m-auto">No diagram available</div>
           }
-          <div class="bg-white rounded-sm p-2" [innerHTML]="diagramWithValues()"></div>
+          <div class="bg-white rounded-xs p-2" [innerHTML]="diagramWithValues()"></div>
         </div>
       }
     </app-collapsible-element>

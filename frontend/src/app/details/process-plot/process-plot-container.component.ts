@@ -17,18 +17,18 @@ import { ProcessPlotComponent } from './process-plot.component';
                              (collapseStateChanged)="isCollapsed = $event" [codiconName]="'codicon-graph-line'">
       @if (isZoomed()) {
         <button buttons (click)="onResetZoom()"
-                class="bg-stone-50 text-black border border-1 border-gray-400 rounded pl-2.5 pr-3 py-0.5 flex items-center">
+                class="bg-stone-50 text-black border border-gray-400 rounded-sm pl-2.5 pr-3 py-0.5 flex items-center">
           <span class="codicon codicon-zoom-out mr-1.5"></span> Reset zoom
         </button>
       }
       @if (axesAreOverridden()) {
         <button buttons (click)="onResetAxes()"
-                class="bg-stone-50 text-black border border-1 border-gray-400 rounded pl-2.5 pr-3 py-0.5 flex items-center">
+                class="bg-stone-50 text-black border border-gray-400 rounded-sm pl-2.5 pr-3 py-0.5 flex items-center">
           <span class="codicon codicon-discard mr-1.5"></span> Reset axes
         </button>
       }
       @if (!isCollapsed) {
-        <app-process-plot content class="block w-full h-full relative" />
+        <app-process-plot content class="block w-full h-full relative"/>
       }
     </app-collapsible-element>
   `

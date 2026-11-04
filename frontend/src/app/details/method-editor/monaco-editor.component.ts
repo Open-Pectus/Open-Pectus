@@ -24,7 +24,7 @@ import { EditorApp } from 'monaco-languageclient/editorApp';
 @Component({
   selector: 'app-monaco-editor',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrls: ['monaco-editor.component.scss'],
+  styleUrls: ['monaco-editor.component.css'],
   template: `
     <div #editor class="w-full h-full" (dragover)="onDragOver($event)" (drop)="onDrop($event)"></div>
   `,

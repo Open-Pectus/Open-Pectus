@@ -24,7 +24,7 @@ import { CommandExamplesListComponent } from './command-examples-list.component'
                              [editorContent]="chosenExampleContent" [fileUriPrefix]="fileUriPrefix"
                              [dropFileDisabledReason]="'Cannot change example content'"
                              class="ml-1" />
-          <div class="h-full w-[1px] bg-slate-500"></div>
+          <div class="h-full w-px bg-slate-500"></div>
           <app-monaco-editor [editorSizeChange]="editorSizeChange" (editorContentChanged)="onEditorContentChanged($event)"
                              [editorContent]="commandToExecute" [unitId]="unitId()" [fileUriPrefix]="fileUriPrefix"
                              [dropFileEnabled]="true"

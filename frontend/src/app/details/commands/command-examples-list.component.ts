@@ -23,7 +23,7 @@ import { CommandExample } from '../../api';
         </button>
       }
     </div>
-    <div class="h-full absolute right-0 top-0 w-0.5 bg-gradient-to-r from-transparent to-slate-500"></div>
+    <div class="h-full absolute right-0 top-0 w-0.5 bg-linear-to-r from-transparent to-slate-500"></div>
   `,
 })
 export class CommandExamplesListComponent {

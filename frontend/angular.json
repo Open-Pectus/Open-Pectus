@@ -72,7 +72,7 @@
               "!../../../../../../../../style-loader/dist/runtime/setAttributesWithoutAttributes.js",
               "!../../../../../../../../style-loader/dist/runtime/styleDomAPI.js"
             ],
-            "inlineStyleLanguage": "scss",
+            "inlineStyleLanguage": "css",
             "assets": [
               "src/favicon.ico",
               "src/assets",
@@ -80,7 +80,7 @@
               "src/mockServiceWorker.js"
             ],
             "styles": [
-              "src/styles.scss",
+              "src/styles.css",
               "node_modules/@openng/ngx-toastr/toastr.css"
             ],
             "scripts": []

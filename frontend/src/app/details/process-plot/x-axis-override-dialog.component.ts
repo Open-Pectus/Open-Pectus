@@ -17,14 +17,14 @@ import { ProcessPlotSelectors } from './ngrx/process-plot.selectors';
           (keyup.enter)="saveButton.click()"
           (keyup.escape)="onClose()">
         <p class="whitespace-nowrap">Choose process value for x axis</p>
-        <select #select class="border border-gray-800 rounded outline-none cursor-pointer">
+        <select #select class="border border-gray-800 rounded-sm outline-hidden cursor-pointer">
           @for (option of options(); track option) {
             <option [value]="option"
                     [selected]="xAxisProcessValueName() === option">{{ option }}
             </option>
           }
         </select>
-        <button #saveButton class="bg-green-400 rounded p-1"
+        <button #saveButton class="bg-green-400 rounded-sm p-1"
                 (click)="onSave(select.value)">Save
         </button>
       </div>

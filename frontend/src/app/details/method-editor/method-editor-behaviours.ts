@@ -265,7 +265,7 @@ export class MethodEditorBehaviours {
             className: injectedLineClassName,
             isWholeLine: true,
             hoverMessage: {value: 'This line has been injected and is not part of the methodContent.'},
-            linesDecorationsClassName: 'codicon-export codicon -ml-injected-line-icon',
+            linesDecorationsClassName: 'codicon-export codicon -ml-[10px]',
             shouldFillLineOnLineBreak: false,
             stickiness: MonacoEditor.TrackedRangeStickiness.GrowsOnlyWhenTypingBefore,
           },
