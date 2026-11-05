@@ -9,7 +9,7 @@ from openpectus import __version__
 from openpectus.aggregator.data.models import (
     RecentEngine,
     ProcessValueType,
-    RecentRunErrorLog, RecentRunMethodAndState, RecentRun, PlotLogEntryValue,
+    RecentRunErrorLog, RecentRunMethodAndState, PersistedMethodState, RecentRun, PlotLogEntryValue,
     RecentRunPlotConfiguration, RecentRunRunLog,
     get_ProcessValueType_from_value,
     PlotLog, PlotLogEntry,
@@ -147,7 +147,7 @@ class RecentRunRepository(RepositoryBase):
         method_and_state = RecentRunMethodAndState()
         method_and_state.run_id = run_id
         method_and_state.method = engine_data.method
-        method_and_state.state = engine_data.method_state
+        method_and_state.state = PersistedMethodState.from_model(engine_data.method_state) # Defaults locked_line_ids and content_locked_line_ids to empty lists. This is okay since recent runs are read-only. 
 
         plot_configuration = RecentRunPlotConfiguration()
         plot_configuration.run_id = run_id
