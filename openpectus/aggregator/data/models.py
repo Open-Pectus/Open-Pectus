@@ -137,11 +137,40 @@ class RecentRun(DBModel):
     archive_filename: Mapped[str | None] = mapped_column()
 
 
+class PersistedMethodState(BaseModel):
+    """ Method state as stored in the database. Line locks are computed by the engine at runtime and not persisted.
+        Importantly locking logic doesn't need to be persisted since when the aggregator shows a recent run, then the whole editor is read-only 
+       """
+    started_line_ids: list[str]
+    executed_line_ids: list[str]
+    injected_line_ids: list[str]
+    failed_line_ids: list[str]
+
+    @staticmethod
+    def from_model(method_state: MethodState) -> PersistedMethodState:
+        return PersistedMethodState(
+            started_line_ids=list(method_state.started_line_ids),
+            executed_line_ids=list(method_state.executed_line_ids),
+            injected_line_ids=list(method_state.injected_line_ids),
+            failed_line_ids=list(method_state.failed_line_ids),
+        )
+
+    def to_model(self) -> MethodState:
+        return MethodState(
+            started_line_ids=list(self.started_line_ids),
+            executed_line_ids=list(self.executed_line_ids),
+            injected_line_ids=list(self.injected_line_ids),
+            failed_line_ids=list(self.failed_line_ids),
+            content_locked_line_ids=[],
+            locked_line_ids=[],
+        )
+
+
 class RecentRunMethodAndState(DBModel):
     __tablename__ = "RecentRunMethodAndStates"
     run_id: Mapped[str] = mapped_column(ForeignKey("RecentRuns.run_id"))
     method: Mapped[Method] = mapped_column(PydanticJSON(Method))
-    state: Mapped[MethodState] = mapped_column(PydanticJSON(MethodState))
+    state: Mapped[PersistedMethodState] = mapped_column(PydanticJSON(PersistedMethodState))
     recent_run: Mapped[RecentRun] = relationship(back_populates="method_and_state")
 
 
