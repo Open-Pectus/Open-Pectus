@@ -34,6 +34,14 @@ const config = {
     extensions: ['.ts', '.js', '.json', '.ttf'],
     fallback: {vm: false, fs: false, module: false},
   },
+
+  // see https://github.com/AssemblyScript/assemblyscript/issues/2301#issuecomment-1992336250
+  // https://github.com/webpack/webpack/issues/14166#issuecomment-923840210
+  // and https://stackoverflow.com/a/79272558
+  // this is also in bundle-monaco-workers.js
+  externals: {
+    'node:fs/promises': 'commonjs node:fs/promises',
+  },
   experiments: {
     topLevelAwait: true,
   },

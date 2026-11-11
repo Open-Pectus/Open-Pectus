@@ -33,7 +33,7 @@ import { AxisLimits } from './process-plot.types';
         <label class="flex justify-between">
           Min: <input #min min="0" type="number" class="border-b border-gray-500 w-32 text-right" [valueAsNumber]="axisConfiguration?.y_min">
         </label>
-        <button #saveButton class="bg-green-400 rounded p-1"
+        <button #saveButton class="bg-green-400 rounded-sm p-1"
                 (click)="onSave(data()?.subplotIndex, data()?.axisIndex, {min: min.valueAsNumber, max: max.valueAsNumber})">Save
         </button>
       </div>

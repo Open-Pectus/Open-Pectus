@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { MswEnablement } from '../msw/msw-enablement';
 import { FrontendPubsubService } from './api';
 
@@ -7,7 +7,7 @@ import { FrontendPubsubService } from './api';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="text-xs text-slate-400">
-      <button class="rounded p-1.5 bg-slate-700 border border-slate-900"
+      <button class="rounded-sm p-1.5 bg-slate-700 border border-slate-900"
               (click)="onButtonClick()">
         <label class="flex pointer-events-none">
           <span>MSW:</span>

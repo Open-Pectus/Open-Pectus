@@ -1,7 +1,9 @@
 // noinspection DuplicatedCode
 
 import { format, getSeconds, sub } from 'date-fns';
-import { delay, http, HttpResponse, PathParams } from 'msw';
+import { PathParams } from 'msw';
+import { http, HttpResponse } from 'msw/http';
+import { delay } from 'msw/utils/delay';
 import {
   ActiveUser,
   AggregatedErrorLog,

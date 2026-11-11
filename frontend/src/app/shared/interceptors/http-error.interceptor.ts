@@ -1,6 +1,6 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { ToastrService } from 'ngx-toastr';
+import { ToastrService } from '@openng/ngx-toastr';
 import { tap } from 'rxjs/operators';
 
 export const httpErrorInterceptor: HttpInterceptorFn = (req, next) => {

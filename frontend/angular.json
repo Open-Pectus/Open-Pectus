@@ -57,6 +57,8 @@
             "allowedCommonJsDependencies": [
               "vscode-jsonrpc",
               "@vscode/iconv-lite-umd",
+              "vscode-languageserver-protocol/browser",
+              "vscode-languageclient/browser",
               "!../../../../../../../../../style-loader/dist/runtime/styleTagTransform.js",
               "!../../../../../../../../../style-loader/dist/runtime/injectStylesIntoStyleTag.js",
               "!../../../../../../../../../style-loader/dist/runtime/insertBySelector.js",
@@ -70,7 +72,7 @@
               "!../../../../../../../../style-loader/dist/runtime/setAttributesWithoutAttributes.js",
               "!../../../../../../../../style-loader/dist/runtime/styleDomAPI.js"
             ],
-            "inlineStyleLanguage": "scss",
+            "inlineStyleLanguage": "css",
             "assets": [
               "src/favicon.ico",
               "src/assets",
@@ -78,8 +80,8 @@
               "src/mockServiceWorker.js"
             ],
             "styles": [
-              "src/styles.scss",
-              "node_modules/ngx-toastr/toastr.css"
+              "src/styles.css",
+              "node_modules/@openng/ngx-toastr/toastr.css"
             ],
             "scripts": []
           },

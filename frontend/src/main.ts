@@ -11,7 +11,7 @@ import { provideStore, Store } from '@ngrx/store';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { provideAuth, StsConfigLoader } from 'angular-auth-oidc-client';
 import { setupWorker } from 'msw/browser';
-import { provideToastr } from 'ngx-toastr';
+import { provideToastr } from '@openng/ngx-toastr';
 import { AuthService } from './app/api';
 import { AppComponent } from './app/app.component';
 import { APP_ROUTES } from './app/app.routes';
@@ -26,14 +26,19 @@ import { ProcessValuePipe } from './app/shared/pipes/process-value.pipe';
 
 import { handlers } from './msw/handlers';
 import { MswEnablement } from './msw/msw-enablement';
-import { provideAnimations } from '@angular/platform-browser/animations';
+import { HttpNetworkFrame } from 'msw/experimental';
 
 async function enableMocking() {
   if(!MswEnablement.isEnabled) return;
   const worker = setupWorker(...handlers);
   return worker.start({
     quiet: true,
-    onUnhandledRequest: (request: Request) => {
+    onUnhandledFrame: ({frame, defaults}) => {
+      if(!(frame instanceof HttpNetworkFrame)) {
+        return;
+      }
+
+      const request = frame.data.request;
       const url = new URL(request.url);
       const pathname = url.pathname;
       if(pathname.startsWith('/assets')
@@ -50,7 +55,8 @@ async function enableMocking() {
       ) {
         return;
       }
-      console.warn(`url ${request.url} was not mocked by MSW`);
+      defaults.warn();
+      // console.warn(`url ${request.url} was not mocked by MSW`);
     },
   });
 }
@@ -83,7 +89,6 @@ enableMocking().then(() => bootstrapApplication(AppComponent, {
       ],
     }),
     provideRouter(APP_ROUTES, withPreloading(PreloadAllModules)),
-    provideAnimations(),
     provideToastr({
       progressBar: true,
       progressAnimation: 'increasing',

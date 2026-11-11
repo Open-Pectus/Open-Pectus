@@ -22,15 +22,15 @@ import { MethodEditorSelectors } from './ngrx/method-editor.selectors';
           @if (versionMismatch()) {
             <div class="w-full bg-yellow-100 px-2 py-1.5 text-xs text-end border-b border-stone-100">
               {{ method().last_author }} has updated the method. You cannot save without refreshing first.
-              <button class="bg-white rounded border-stone-300 border px-2 py-1 ml-2" (click)="forceRefreshMethod()">
+              <button class="bg-white rounded-sm border-stone-300 border px-2 py-1 ml-2" (click)="forceRefreshMethod()">
                 Discard my changes and refresh
               </button>
             </div>
           }
-          <app-monaco-editor class="block rounded-sm flex-1 pl-1" [editorSizeChange]="editorSizeChange"
+          <app-monaco-editor class="block rounded-xs flex-1 pl-1" [editorSizeChange]="editorSizeChange"
                              [unitId]="unitId()" (editorIsReady)="onEditorReady($event)"
                              [dropFileEnabled]="isStopped()" [dropFileDisabledReason]="dropFileDisabledReason"
-                             [editorOptions]="editorOptions()" [fileUriPrefix]="'method_editor'" />
+                             [editorOptions]="editorOptions()" [fileUriPrefix]="'method_editor'"/>
         </div>
       }
       @if (!collapsed && methodEditorIsDirty()) {

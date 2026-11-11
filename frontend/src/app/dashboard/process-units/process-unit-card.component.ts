@@ -6,14 +6,14 @@ import { ProcessUnitStatePipe } from '../../shared/pipes/process-unit-state.pipe
 import { UtilMethods } from '../../shared/util-methods';
 
 @Component({
-    selector: 'app-process-unit-card',
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [
-        NgClass,
-        FormatDurationMsecPipe,
-        ProcessUnitStatePipe,
-    ],
-    template: `
+  selector: 'app-process-unit-card',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    NgClass,
+    FormatDurationMsecPipe,
+    ProcessUnitStatePipe,
+  ],
+  template: `
     <div class="rounded-md shadow-md cursor-pointer bg-stone-100 hover:brightness-95">
       <div [class]="'px-5 py-3 text-white rounded-t-md flex justify-between ' + backgroundColor">
         <div class="font-semibold text-lg">{{ processUnit()?.name }}</div>
