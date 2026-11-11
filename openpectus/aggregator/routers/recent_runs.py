@@ -42,7 +42,7 @@ def get_recent_run_method_and_state(user_roles: UserRolesValue, run_id: str) -> 
     method_and_state = repo.get_method_and_state_by_run_id(run_id)
     if method_and_state is None:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail='Method and state not found')
-    return Dto.MethodAndState.model_validate(method_and_state)
+    return Dto.MethodAndState.from_models(method_and_state.method, method_and_state.state.to_model())
 
 
 @router.get('/{run_id}/run_log', response_model_exclude_none=True)
