@@ -41,6 +41,7 @@ import { CollapsibleElementStorageService } from './collapsible-element-storage.
         </div>
       </div>
       <div class="absolute bottom-0 left-0 w-full h-1.5" [class.-mb-8]="widenDragHandler"
+           [attr.inert]="collapsed ? true : null"
            [style.height.rem]="widenDragHandler ? 4 : null"
            [class.cursor-ns-resize]="heightResizable()"
            [draggable]="heightResizable()"
