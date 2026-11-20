@@ -57,6 +57,10 @@ def get_pcode_tm_grammar(engine_id: str, agg: Aggregator = Depends(agg_deps.get_
     patterns = [
         dict(name="comment.control.pcode", begin="#", end="$"),  # P-code comments. Color: green
         dict(name="support.type.property-name", match=r"^\s*\d+(\.\d+)?\s"),  # P-code thresholds. Color: bright red
+        dict(
+        match=r"\b(Call macro|Macro|Mark|Block|Notify|Warning|Info)\s*:([^#]*)",
+        captures={"1": {"name": "constant.language.pcode"}},
+        ), # Names and test info should just be treated as plain text, so should not be highlighting
     ]
     """
     A string such as "Block Time" can be interpreted either as the tag "Block Time"
